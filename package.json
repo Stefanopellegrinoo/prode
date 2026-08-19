@@ -9,6 +9,7 @@
     "dev:front": "cd prode-front && npm run dev",
     "dev:worker": "cd prode-back && npm run dev:worker",
     "install:all": "npm install && cd prode-back && npm install && cd ../prode-front && npm install",
+    "db:setup": "cd prode-back && npm run db:setup",
     "test:back": "cd prode-back && npm test",
     "build:front": "cd prode-front && npm run build"
   },

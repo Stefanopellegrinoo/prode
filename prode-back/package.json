@@ -28,6 +28,7 @@
     "dev": "nodemon src/index.js",
     "start:worker": "node src/workers/calculatePoints.worker.js",
     "dev:worker": "nodemon  src/workers/calculatePoints.worker.js",
+    "db:setup": "node src/scripts/dbSetup.js",
     "test": "node --test tests/**/*.test.js"
   },
   "keywords": [],

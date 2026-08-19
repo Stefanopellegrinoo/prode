@@ -96,7 +96,13 @@ npm run install:all
 * **Backend**: copiar `prode-back/.env.example` a `prode-back/.env` y completar tu base de datos y Redis.
 * **Frontend**: copiar `prode-front/.env.example` a `prode-front/.env`.
 
-### 5. Iniciar todo en simultáneo desde la raíz
+### 5. Crear Tablas y Cargar Datos Iniciales (Seed)
+```bash
+npm run db:setup
+```
+*Crea automáticamente todas las tablas en PostgreSQL e inserta subdivisiones, torneo Top 12, los 12 equipos y usuarios de prueba (Admin y Demo).*
+
+### 6. Iniciar la aplicación
 ```bash
 npm run dev
 ```
