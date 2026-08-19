@@ -1,0 +1,27 @@
+{
+  "name": "urba-prode-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Plataforma de pronósticos deportivos (Prode) para el rugby de la URBA - Monorepo",
+  "scripts": {
+    "dev:back": "cd prode-back && npm run dev",
+    "dev:front": "cd prode-front && npm run dev",
+    "dev:worker": "cd prode-back && npm run dev:worker",
+    "test:back": "cd prode-back && npm test",
+    "build:front": "cd prode-front && npm run build"
+  },
+  "keywords": [
+    "rugby",
+    "urba",
+    "prode",
+    "express",
+    "react",
+    "redis",
+    "bullmq",
+    "postgresql",
+    "sequelize",
+    "tailwind"
+  ],
+  "author": "Stefano Pellegrino",
+  "license": "ISC"
+}
