@@ -77,7 +77,11 @@ export default class TeamService {
     }
 
     const fileExt = file.originalname.split('.').pop();
-    const filePath = `${teamId}.${fileExt}`; // Ojo: sin la carpeta "teams/" aquí
+    const filePath = `${teamId}.${fileExt}`;
+
+    if (!supabase) {
+      throw new Error("Supabase Storage no está configurado en las variables de entorno.");
+    }
 
     const { error: uploadError } = await supabase.storage
       .from('teams')

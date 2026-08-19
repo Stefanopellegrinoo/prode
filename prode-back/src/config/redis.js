@@ -9,17 +9,18 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const {
-  REDIS_HOST,
-  REDIS_PORT,
+  REDIS_HOST = '127.0.0.1',
+  REDIS_PORT = 6379,
   REDIS_USERNAME,
-  REDIS_PASSWORD
+  REDIS_PASSWORD,
+  REDIS_TLS = 'false'
 } = process.env;
 
-const isTlsRequired = REDIS_HOST && !REDIS_HOST.includes('localhost') && !REDIS_HOST.includes('127.0.0.1');
+const isTlsRequired = REDIS_TLS === 'true';
 
 export const redis = new Redis({
-  host: REDIS_HOST || '127.0.0.1',
-  port: Number(REDIS_PORT) || 6379,
+  host: REDIS_HOST,
+  port: Number(REDIS_PORT),
   username: REDIS_USERNAME,
   password: REDIS_PASSWORD,
   ...(isTlsRequired ? { tls: {} } : {}),
