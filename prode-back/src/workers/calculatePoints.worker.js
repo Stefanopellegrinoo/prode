@@ -1,3 +1,4 @@
+import '../config/nodePolyfills.js';
 import { Worker } from 'bullmq';
 import { redis } from '../config/redis.js';
 import UserMatchPointService from '../services/userMatchPoint.service.js';

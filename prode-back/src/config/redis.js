@@ -20,7 +20,7 @@ const {
 const isTlsRequired = REDIS_TLS === 'true';
 
 const redisOptions = {
-  maxRetriesPerRequest: 1,
+  maxRetriesPerRequest: null,
   lazyConnect: true,
   retryStrategy(times) {
     if (times > 2) return null; // No reintentar indefinidamente
