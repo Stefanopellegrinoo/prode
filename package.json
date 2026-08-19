@@ -4,9 +4,11 @@
   "private": true,
   "description": "Plataforma de pronósticos deportivos (Prode) para el rugby de la URBA - Monorepo",
   "scripts": {
+    "dev": "concurrently -n \"API,WORKER,FRONT\" -c \"blue,magenta,cyan\" \"npm run dev:back\" \"npm run dev:worker\" \"npm run dev:front\"",
     "dev:back": "cd prode-back && npm run dev",
     "dev:front": "cd prode-front && npm run dev",
     "dev:worker": "cd prode-back && npm run dev:worker",
+    "install:all": "npm install && cd prode-back && npm install && cd ../prode-front && npm install",
     "test:back": "cd prode-back && npm test",
     "build:front": "cd prode-front && npm run build"
   },
@@ -23,5 +25,8 @@
     "tailwind"
   ],
   "author": "Stefano Pellegrino",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "concurrently": "^10.0.5"
+  }
 }

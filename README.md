@@ -87,29 +87,25 @@ git clone https://github.com/Stefanopellegrinoo/prode.git
 cd prode
 ```
 
-### 3. Configurar el Backend
+### 3. Instalación de dependencias
 ```bash
-cd prode-back
-npm install
-cp .env.example .env
-```
-Completar las variables en `prode-back/.env` (base de datos, secretos JWT y Redis) y luego iniciar:
-```bash
-# Servidor API
-npm run dev
-
-# (Opcional) Worker de puntos en otra terminal
-npm run dev:worker
+npm run install:all
 ```
 
-### 4. Configurar el Frontend
+### 4. Configurar Variables de Entorno
+* **Backend**: copiar `prode-back/.env.example` a `prode-back/.env` y completar tu base de datos y Redis.
+* **Frontend**: copiar `prode-front/.env.example` a `prode-front/.env`.
+
+### 5. Iniciar todo en simultáneo desde la raíz
 ```bash
-cd ../prode-front
-npm install
-cp .env.example .env
 npm run dev
 ```
-La aplicación quedará corriendo en `http://localhost:5173`.
+Este comando levanta concurrentemente en una sola terminal:
+* 🌐 **API Backend**: `http://localhost:3000`
+* ⚙️ **BullMQ Worker**: Procesamiento de puntos en segundo plano
+* 🖥️ **Frontend Vite**: `http://localhost:5173`
+
+*(O si preferís levantarlos por separado: `npm run dev:back`, `npm run dev:worker` y `npm run dev:front`)*
 
 ---
 
