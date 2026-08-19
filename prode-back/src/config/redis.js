@@ -9,6 +9,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const {
+  REDIS_URL,
   REDIS_HOST = '127.0.0.1',
   REDIS_PORT = 6379,
   REDIS_USERNAME,
@@ -18,19 +19,25 @@ const {
 
 const isTlsRequired = REDIS_TLS === 'true';
 
-export const redis = new Redis({
-  host: REDIS_HOST,
-  port: Number(REDIS_PORT),
-  username: REDIS_USERNAME,
-  password: REDIS_PASSWORD,
-  ...(isTlsRequired ? { tls: {} } : {}),
+const redisOptions = {
   maxRetriesPerRequest: 1,
   lazyConnect: true,
   retryStrategy(times) {
     if (times > 2) return null; // No reintentar indefinidamente
     return Math.min(times * 100, 1000);
   },
-});
+  ...(isTlsRequired ? { tls: {} } : {}),
+};
+
+export const redis = REDIS_URL
+  ? new Redis(REDIS_URL, redisOptions)
+  : new Redis({
+      ...redisOptions,
+      host: REDIS_HOST,
+      port: Number(REDIS_PORT),
+      username: REDIS_USERNAME,
+      password: REDIS_PASSWORD,
+    });
 
 redis.on('error', (err) => {
   if (process.env.NODE_ENV !== 'test') {

@@ -7,6 +7,8 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const {
+  DATABASE_URL,
+  DB_URL,
   DB_HOST,
   DB_PORT,
   DB_NAME,
@@ -20,16 +22,16 @@ const {
   NODE_ENV
 } = process.env;
 
-export const sequelize = new Sequelize(DB_NAME, DB_USER, DB_PASS, {
-  host: DB_HOST,
-  port: parseInt(DB_PORT, 10),
+const connectionUri = DATABASE_URL || DB_URL;
+
+const sequelizeOptions = {
   dialect: 'postgres',
   dialectModule: pg,
   pool: {
-    max:   parseInt(DB_POOL_MAX, 10),
-    min:   parseInt(DB_POOL_MIN, 10),
+    max: parseInt(DB_POOL_MAX, 10),
+    min: parseInt(DB_POOL_MIN, 10),
     acquire: parseInt(DB_POOL_ACQUIRE, 10),
-    idle:    parseInt(DB_POOL_IDLE,  10),
+    idle: parseInt(DB_POOL_IDLE, 10),
   },
   logging: NODE_ENV === 'production' ? false : (msg) => console.debug(msg),
   define: {
@@ -40,4 +42,12 @@ export const sequelize = new Sequelize(DB_NAME, DB_USER, DB_PASS, {
   dialectOptions: DB_SSL === 'true'
     ? { ssl: { require: true, rejectUnauthorized: false } }
     : {},
-});
+};
+
+export const sequelize = connectionUri
+  ? new Sequelize(connectionUri, sequelizeOptions)
+  : new Sequelize(DB_NAME, DB_USER, DB_PASS, {
+      ...sequelizeOptions,
+      host: DB_HOST,
+      port: DB_PORT ? parseInt(DB_PORT, 10) : 5432,
+    });
