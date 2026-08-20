@@ -122,9 +122,70 @@ async function setupDatabase() {
       role: 'user'
     }
   });
-  console.log('✅ Usuarios iniciales creados:');
-  console.log('   - Admin: admin@prode.com / Admin1234!');
-  console.log('   - Demo:  demo@prode.com  / User1234!');
+  // 5. Crear Partidos de prueba para Fecha 1 (Primera e Intermedia)
+  const teams = await Team.findAll({ where: { tournamentId: top12.id } });
+  const teamMap = {};
+  teams.forEach(t => { teamMap[t.shortName] = t.id; });
+
+  const subPrimera = await Subdivision.findOne({ where: { name: 'Primera' } });
+  const subIntermedia = await Subdivision.findOne({ where: { name: 'Intermedia' } });
+
+  const sampleMatchups = [
+    { home: 'CASI', away: 'SIC' },
+    { home: 'Hindú', away: 'Belgrano' },
+    { home: 'Alumni', away: 'CUBA' },
+    { home: 'Newman', away: 'San Luis' },
+    { home: 'Regatas', away: 'BIEI' },
+    { home: 'Champagnat', away: 'Los Tilos' }
+  ];
+
+  const nextSaturday = new Date();
+  nextSaturday.setDate(nextSaturday.getDate() + ((6 - nextSaturday.getDay() + 7) % 7 || 7));
+  nextSaturday.setHours(15, 30, 0, 0);
+
+  for (const m of sampleMatchups) {
+    const homeId = teamMap[m.home];
+    const awayId = teamMap[m.away];
+    if (homeId && awayId) {
+      if (subPrimera) {
+        await Match.findOrCreate({
+          where: {
+            tournament_id: top12.id,
+            subdivision_id: subPrimera.id,
+            home_team_id: homeId,
+            away_team_id: awayId
+          },
+          defaults: {
+            tournament_id: top12.id,
+            subdivision_id: subPrimera.id,
+            home_team_id: homeId,
+            away_team_id: awayId,
+            date: nextSaturday,
+            status: 'UPCOMING'
+          }
+        });
+      }
+      if (subIntermedia) {
+        await Match.findOrCreate({
+          where: {
+            tournament_id: top12.id,
+            subdivision_id: subIntermedia.id,
+            home_team_id: homeId,
+            away_team_id: awayId
+          },
+          defaults: {
+            tournament_id: top12.id,
+            subdivision_id: subIntermedia.id,
+            home_team_id: homeId,
+            away_team_id: awayId,
+            date: nextSaturday,
+            status: 'UPCOMING'
+          }
+        });
+      }
+    }
+  }
+  console.log('✅ Partidos de la Fecha 1 cargados (Primera e Intermedia).');
 
   console.log('\n🚀 ¡Base de datos inicializada y lista para jugar!');
   process.exit(0);
