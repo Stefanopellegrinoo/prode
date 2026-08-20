@@ -51,10 +51,10 @@ const Login = () => {
     if (!validateForm()) return;
     
     try {
-      setLoadingS(true)
-       await login(formData.email, formData.password);
-
+      setLoadingS(true);
+      await login(formData.email, formData.password);
       showToast('¡Bienvenido de nuevo!', 'success');
+      navigate('/dashboard');
     } catch (error) {
       const serverMessage = error.response?.data?.message || error.response?.data?.error || error.message || 'Error al iniciar sesión';
       setErrors(prev => ({ ...prev, session: serverMessage }));

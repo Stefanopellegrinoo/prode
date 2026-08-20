@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/ui/Button';
 import InputField from '../components/form/InputField';
@@ -18,6 +18,7 @@ const Register = () => {
   const [errors, setErrors] = useState({});
   const { register, loading } = useAuth();
   const { showToast } = useToast();
+  const navigate = useNavigate();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -75,6 +76,8 @@ const Register = () => {
         username: formData.username,
         password: formData.password,
       });
+      showToast('¡Registro exitoso! Bienvenido.', 'success');
+      navigate('/dashboard');
     } catch (error) {
       console.error('Error al registrarse:', error);
       const serverMessage = error.response?.data?.message || error.response?.data?.error || error.message || 'Error al registrarse';

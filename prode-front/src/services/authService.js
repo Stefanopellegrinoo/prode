@@ -146,12 +146,18 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    if (!error.response) {
+    if (!error.response || !originalRequest) {
       return Promise.reject(error);
     }
 
-    if (originalRequest.url.includes('/auth/refresh')) {
-      // 🔥 No hago window.location aquí
+    // Do NOT attempt refresh token rotation on auth endpoints (login, register, refresh, me)
+    const isAuthEndpoint =
+      originalRequest.url?.includes('/auth/login') ||
+      originalRequest.url?.includes('/auth/register') ||
+      originalRequest.url?.includes('/auth/refresh') ||
+      originalRequest.url?.includes('/auth/me');
+
+    if (isAuthEndpoint) {
       return Promise.reject(error);
     }
 
