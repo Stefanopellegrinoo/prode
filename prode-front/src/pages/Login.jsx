@@ -56,12 +56,11 @@ const Login = () => {
 
       showToast('¡Bienvenido de nuevo!', 'success');
     } catch (error) {
-      newErrors.session = error.response.data.error || error.response.data
-     setErrors(newErrors);
-
-      showToast(error.message || 'Error al iniciar sesión', 'error');
-    }finally{
-      setLoadingS(false)
+      const serverMessage = error.response?.data?.message || error.response?.data?.error || error.message || 'Error al iniciar sesión';
+      setErrors(prev => ({ ...prev, session: serverMessage }));
+      showToast(serverMessage, 'error');
+    } finally {
+      setLoadingS(false);
     }
   };
 

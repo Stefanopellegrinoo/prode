@@ -75,13 +75,11 @@ const Register = () => {
         username: formData.username,
         password: formData.password,
       });
-      showToast('¡Registro exitoso!', 'success');
     } catch (error) {
-      console.error('Error al registrarse:', error.response.data.error);
-      newErrors.session = error.response.data.error;
-      setErrors(newErrors);
-
-      showToast(error.message || 'Error al registrarse', 'error');
+      console.error('Error al registrarse:', error);
+      const serverMessage = error.response?.data?.message || error.response?.data?.error || error.message || 'Error al registrarse';
+      setErrors(prev => ({ ...prev, session: serverMessage }));
+      showToast(serverMessage, 'error');
     }
   };
 
