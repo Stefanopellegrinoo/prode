@@ -1,5 +1,5 @@
 // API URL - Change this to your actual API endpoint
-export const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3030/api"
+export const API_URL = import.meta.env.VITE_API_URL || "/api"
 
 // App constants
 export const APP_NAME = "Rugby Prode"

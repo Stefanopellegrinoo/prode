@@ -84,7 +84,7 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 3030;
 if (process.env.NODE_ENV !== 'production') {
-  app.listen(PORT, () => {
+  app.listen(PORT, '0.0.0.0', () => {
     console.log(`Servidor corriendo en puerto ${PORT}`);
   });
 }
