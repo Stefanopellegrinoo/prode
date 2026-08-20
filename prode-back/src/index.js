@@ -29,6 +29,7 @@ app.use(express.json());
 const allowedOrigins = [
   'https://prode-front-uxlb.vercel.app',
   'https://www.proderugbyargentina.fyi',
+  'http://localhost:5173',
   ...(process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',').map(o => o.trim()) : [])
 ];
 
@@ -81,7 +82,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3030;
 if (process.env.NODE_ENV !== 'production') {
   app.listen(PORT, () => {
     console.log(`Servidor corriendo en puerto ${PORT}`);
