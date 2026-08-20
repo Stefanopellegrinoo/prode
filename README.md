@@ -107,7 +107,7 @@ npm run db:setup
 npm run dev
 ```
 Este comando levanta concurrentemente en una sola terminal:
-* 🌐 **API Backend**: `http://localhost:3000`
+* 🌐 **API Backend**: `http://localhost:3030`
 * ⚙️ **BullMQ Worker**: Procesamiento de puntos en segundo plano
 * 🖥️ **Frontend Vite**: `http://localhost:5173`
 

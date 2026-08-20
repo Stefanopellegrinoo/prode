@@ -37,12 +37,15 @@ const isLocalhostOrigin = (origin) => /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?
 app.use(cors({
   origin: function (origin, callback) {
     if (!origin || allowedOrigins.includes(origin) || isLocalhostOrigin(origin)) {
-      return callback(null, true);
+      return callback(null, origin || true);
     } else {
       return callback(new Error('Not allowed by CORS'));
     }
   },
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
+  exposedHeaders: ['Set-Cookie']
 }));
 
 app.use(cookieParser());

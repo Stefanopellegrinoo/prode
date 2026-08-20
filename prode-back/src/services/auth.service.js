@@ -34,9 +34,17 @@ export default class AuthService {
 
   async login({ email, password }) {
     const user = await this.userRepo.findByEmail(email);
-    if (!user) throw new Error("Mail no registrado.");
+    if (!user) {
+      const err = new Error("Mail no registrado.");
+      err.statusCode = 401;
+      throw err;
+    }
     const ok = await compare(password, user.passwordHash);
-    if (!ok) throw new Error("Contraseña incorrecta.");
+    if (!ok) {
+      const err = new Error("Contraseña incorrecta.");
+      err.statusCode = 401;
+      throw err;
+    }
 
     return this._generateTokens(user);
   }
