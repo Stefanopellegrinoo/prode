@@ -1,14 +1,8 @@
 import api from "./authService"
 
-export const getGlobalRanking = async () => {
-  try {
-    const response = await api.get("/ranking/global")
-    return response.data
-  } catch (error) {
-    console.error("Error fetching global ranking:", error)
-    throw new Error(error.response?.data?.message || "Error al obtener el ranking global")
-  }
-}
+// getGlobalRanking() removed (ADR-8 / F2.5): it hit `/ranking/global`, which
+// doesn't exist in ranking.routes.js — a guaranteed 404. Ranking.jsx uses
+// getTournamentRanking (per-subdivision, real endpoint) instead.
 
 export const getGroupRanking = async (groupId) => {
   try {
