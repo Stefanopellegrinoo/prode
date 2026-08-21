@@ -1,14 +1,20 @@
 import PropTypes from "prop-types";
 
 // Shared table for Ranking (delta column, no admin actions) and GroupDetail
-// (admin ✕ column, no delta — matches Grupo Detalle.dc.html exactly: that
-// prototype's 4th column is blank outside edit mode, it never shows a delta).
+// (admin ✕ column, no delta — that prototype's 4th column is blank outside
+// edit mode, it never shows a delta).
 //
-// Podium coloring differs per prototype on purpose: Ranking.dc.html paints
-// every top-3 row flat gold; Grupo Detalle.dc.html tiers gold/silver/bronze
-// by exact position. `podiumTiered` toggles between the two, matching each
-// screen's own source file instead of forcing one behavior on both.
+// The two prototypes differ on purpose and each prop tracks one of those
+// differences instead of forcing one behavior on both:
+// - 4th column width: 56px in Ranking.dc.html (delta), 44px in Grupo
+//   Detalle.dc.html (✕ / blank), derived from `showDelta`.
+// - Podium coloring: Ranking.dc.html paints every top-3 row flat gold;
+//   Grupo Detalle.dc.html tiers gold/silver/bronze by exact position.
 const RankingTable = ({ rows, meId, onRemove, showDelta = true, podiumTiered = false }) => {
+  const gridCols = showDelta
+    ? "grid-cols-[44px_1fr_62px_56px]"
+    : "grid-cols-[44px_1fr_62px_44px]";
+
   const podiumColor = (pos) => {
     if (!podiumTiered) return pos <= 3 ? "text-prode-gold" : "text-prode-text-disabled";
     if (pos === 1) return "text-prode-gold";
@@ -19,7 +25,9 @@ const RankingTable = ({ rows, meId, onRemove, showDelta = true, podiumTiered = f
 
   return (
     <div className="bg-prode-surface border border-prode-border rounded-[10px] overflow-hidden">
-      <div className="grid grid-cols-[44px_1fr_62px_56px] px-4 py-[10px] border-b border-prode-border text-[11px] font-[800] tracking-[0.1em] uppercase text-prode-text-disabled">
+      <div
+        className={`grid ${gridCols} px-4 py-[10px] border-b border-prode-border text-[11px] font-[800] tracking-[0.1em] uppercase text-prode-text-disabled`}
+      >
         <div>#</div>
         <div>Jugador</div>
         <div className="text-right">Pts</div>
@@ -33,7 +41,7 @@ const RankingTable = ({ rows, meId, onRemove, showDelta = true, podiumTiered = f
         return (
           <div
             key={r.userId}
-            className={`grid grid-cols-[44px_1fr_62px_56px] px-4 py-[12px] border-b border-prode-border-divider items-center ${
+            className={`grid ${gridCols} px-4 py-[12px] border-b border-prode-border-divider items-center ${
               isMe ? "bg-prode-elevated" : ""
             }`}
           >
@@ -52,6 +60,7 @@ const RankingTable = ({ rows, meId, onRemove, showDelta = true, podiumTiered = f
                 <button
                   type="button"
                   onClick={() => onRemove(r.userId, r.name)}
+                  aria-label={`Eliminar a ${r.name}`}
                   className="w-[32px] h-[32px] rounded-[5px] bg-prode-error-bg text-prode-error flex items-center justify-center text-[14px] font-[800]"
                 >
                   ✕

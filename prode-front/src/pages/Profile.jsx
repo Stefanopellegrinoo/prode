@@ -8,6 +8,9 @@ import { useTournament } from "../context/TournamentContext";
 import { getUserStats, updateUserProfile, updatePassword } from "../services/userService";
 import { getTournamentRanking } from "../services/rankingService";
 import { useToast } from "../hooks/useToast";
+import { getInitials } from "../lib/utils";
+
+const MIN_PASSWORD_LENGTH = 8;
 
 const InputLabel = ({ label }) => (
   <div className="text-[13px] font-[700] text-prode-text-muted mb-1">{label}</div>
@@ -31,6 +34,7 @@ const Profile = () => {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [savingPass, setSavingPass] = useState(false);
+  const [newPasswordError, setNewPasswordError] = useState("");
 
   const [stats, setStats] = useState([]);
   const [rankingRows, setRankingRows] = useState(null); // null = not fetched yet
@@ -91,8 +95,17 @@ const Profile = () => {
   };
 
   const handleSavePassword = async () => {
+    setNewPasswordError("");
     if (!currentPassword || !newPassword) {
       showToast("Completá todos los campos.", "error");
+      return;
+    }
+    // The placeholder promises "mín. 8" — enforce it here and in the backend
+    // (user.service.js#changePassword) instead of only promising it.
+    if (newPassword.length < MIN_PASSWORD_LENGTH) {
+      setNewPasswordError(
+        `La contraseña nueva necesita al menos ${MIN_PASSWORD_LENGTH} caracteres.`
+      );
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -114,7 +127,7 @@ const Profile = () => {
     }
   };
 
-  const initials = name ? name.substring(0, 2).toUpperCase() : "??";
+  const initials = getInitials(name);
 
   return (
     <AppLayout width="default">
@@ -137,9 +150,9 @@ const Profile = () => {
           </div>
         ) : (
           <div className="p-4 grid grid-cols-3 gap-2 border-b border-prode-border">
-            <StatCard value={pointsValue} label="puntos" />
-            <StatCard value={positionLabel} label="general" />
-            <StatCard value={accuracyValue} label="efectividad" tone="success" />
+            <StatCard value={pointsValue} label="puntos" size="sm" />
+            <StatCard value={positionLabel} label="general" size="sm" />
+            <StatCard value={accuracyValue} label="efectividad" tone="success" size="sm" />
           </div>
         )}
 
@@ -213,13 +226,25 @@ const Profile = () => {
                     onChange={(e) => setCurrentPassword(e.target.value)}
                     className="w-full h-[52px] bg-prode-elevated border border-prode-border-control rounded-[6px] px-4 text-[15px] outline-none focus:border-prode-focus transition-colors"
                   />
-                  <input
-                    type="password"
-                    placeholder="Nueva contraseña (mín. 8)"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full h-[52px] bg-prode-elevated border border-prode-border-control rounded-[6px] px-4 text-[15px] outline-none focus:border-prode-focus transition-colors"
-                  />
+                  <div>
+                    <input
+                      type="password"
+                      placeholder={`Nueva contraseña (mín. ${MIN_PASSWORD_LENGTH})`}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      aria-invalid={Boolean(newPasswordError)}
+                      className={`w-full h-[52px] bg-prode-elevated rounded-[6px] px-4 text-[15px] outline-none transition-colors ${
+                        newPasswordError
+                          ? "border-2 border-prode-error"
+                          : "border border-prode-border-control focus:border-prode-focus"
+                      }`}
+                    />
+                    {newPasswordError && (
+                      <div className="mt-[6px] text-[13px] font-[600] text-prode-error">
+                        {newPasswordError}
+                      </div>
+                    )}
+                  </div>
                   <input
                     type="password"
                     placeholder="Repetir nueva contraseña"

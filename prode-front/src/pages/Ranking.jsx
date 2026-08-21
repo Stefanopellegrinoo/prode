@@ -69,7 +69,9 @@ const Ranking = () => {
 
   return (
     <AppLayout width="default">
-      <div className="flex flex-col min-h-screen pb-[176px]">
+      {/* AppLayout already adds pb-[88px] for the bottom nav; these 88px are the
+          extra clearance the pinned row needs (176px total, per Ranking.dc.html). */}
+      <div className="flex flex-col min-h-screen pb-[88px]">
         <div className="pt-[18px] px-4 flex flex-col gap-[14px] border-b border-prode-border">
           <div className="flex items-center justify-between">
             <div className="font-display text-[24px] font-[900] tracking-[-0.01em] uppercase">

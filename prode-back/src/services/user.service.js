@@ -6,6 +6,8 @@ import { Sequelize } from "sequelize";
 import { Subdivision } from "../models/subdivision.model.js";
 import { Tournament } from "../models/tournament.model.js";
 
+const MIN_PASSWORD_LENGTH = 8;
+
 export default class UserService {
   constructor() {
     this.userRepo = new UserRepository();
@@ -28,6 +30,14 @@ export default class UserService {
   }
 
   async changePassword(userId, currentPassword, newPassword) {
+    if (!newPassword || newPassword.length < MIN_PASSWORD_LENGTH) {
+      const error = new Error(
+        `La contraseña nueva necesita al menos ${MIN_PASSWORD_LENGTH} caracteres.`
+      );
+      error.status = 400;
+      throw error;
+    }
+
     const user = await this.userRepo.findById(userId);
     if (!user) throw new Error("Usuario no encontrado.");
 

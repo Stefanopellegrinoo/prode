@@ -71,9 +71,16 @@ const GroupDetail = () => {
     points: r.points,
   }));
 
-  const handleCopy = () => {
+  const handleCopy = async () => {
     if (!groupData?.inviteCode) return;
-    navigator.clipboard.writeText(groupData.inviteCode);
+    try {
+      // Rejects (or is undefined) without a secure context / clipboard permission —
+      // never claim "✓ Copiado" when nothing reached the clipboard.
+      await navigator.clipboard.writeText(groupData.inviteCode);
+    } catch {
+      showToast("No pudimos copiar el código. Copialo a mano.", "error");
+      return;
+    }
     setCopied(true);
     setTimeout(() => setCopied(false), 1800);
   };
@@ -81,7 +88,8 @@ const GroupDetail = () => {
   const closeDialog = () => setDialog(null);
 
   const confirmDialog = async () => {
-    if (!dialog) return;
+    // Guards the double-click that would fire the destructive action twice.
+    if (!dialog || dialogBusy) return;
     setDialogBusy(true);
     try {
       if (dialog.kind === "leave") {
@@ -128,6 +136,7 @@ const GroupDetail = () => {
           <div className="flex items-start gap-3">
             <button
               onClick={() => navigate("/groups")}
+              aria-label="Volver a grupos"
               className="w-[38px] h-[38px] rounded-[6px] bg-prode-elevated flex items-center justify-center text-prode-text hover:bg-prode-surface-row transition-colors shrink-0"
             >
               ←
@@ -150,6 +159,8 @@ const GroupDetail = () => {
             </div>
             <button
               onClick={() => setInfoOpen((v) => !v)}
+              aria-label="Información del grupo"
+              aria-expanded={infoOpen}
               className={`w-[38px] h-[38px] rounded-[6px] flex items-center justify-center font-display font-[900] transition-colors shrink-0 ${
                 infoOpen
                   ? "bg-prode-text text-prode-bg"
@@ -237,6 +248,7 @@ const GroupDetail = () => {
           }
           confirmLabel={dialogBusy ? "..." : dialog.kind === "leave" ? "Abandonar" : "Eliminar"}
           cancelLabel={dialog.kind === "leave" ? "Quedarme" : "Cancelar"}
+          confirmDisabled={dialogBusy}
           onConfirm={confirmDialog}
           onCancel={closeDialog}
         />
