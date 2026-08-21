@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import AppLayout from "../components/layouts/AppLayout";
 import StatCard from "../components/ui/StatCard";
@@ -7,6 +7,7 @@ import LoadingSpinner from "../components/ui/LoadingSpinner";
 import { useTournament } from "../context/TournamentContext";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
+import { useAlert } from "../context/AlertContext";
 import { getUserStats } from "../services/userService";
 import { getMyGroups } from "../services/groupService";
 import { getTournamentRanking } from "../services/rankingService";
@@ -45,53 +46,68 @@ const Dashboard = () => {
   const { currentUser } = useAuth();
   const { darkMode } = useTheme();
   const { tournament, subdivisions, fechas, fechaActual, matchesBy, loading, error } = useTournament();
+  const { showToast, hideToast } = useAlert();
 
   const [campaignSubId, setCampaignSubId] = useState(null);
   const [stats, setStats] = useState([]);
   const [groups, setGroups] = useState([]);
   const [rankingBySub, setRankingBySub] = useState({});
   const [profileLoading, setProfileLoading] = useState(true);
+  const [profileFailed, setProfileFailed] = useState(false);
+  const [profileReload, setProfileReload] = useState(0);
 
-  // Fetched once when the tournament/subdivisions resolve — never refetched on
-  // tab switches (spec scenario "cambio de tab sin refetch"). Reuses services
-  // that already exist for other screens (getUserStats, getMyGroups,
-  // getTournamentRanking) — no new backend endpoints.
+  const currentSubId = campaignSubId ?? subdivisions[0]?.id ?? null;
+
+  // Stats + groups don't depend on the tournament resolving (a user can have
+  // groups with no active fixture), so this runs on mount, in parallel with the
+  // TournamentContext load. allSettled instead of .catch(() => []) so a
+  // transient failure stays distinguishable from a genuinely empty account —
+  // otherwise an active user gets misclassified as "nuevo".
   useEffect(() => {
-    if (loading) return;
-    if (!tournament?.id) {
-      // sinFixture / no tournament at all — nothing to profile-fetch, don't
-      // get stuck showing profileLoading forever.
-      setProfileLoading(false);
-      return;
-    }
     let cancelled = false;
+    setProfileLoading(true);
+    setProfileFailed(false);
 
     (async () => {
-      setProfileLoading(true);
-      const [statsData, groupsData, rankings] = await Promise.all([
-        getUserStats().catch(() => []),
-        getMyGroups().catch(() => []),
-        Promise.all(
-          subdivisions.map((sub) =>
-            getTournamentRanking(sub.id, tournament.id)
-              .then((rows) => [sub.id, rows || []])
-              .catch(() => [sub.id, []])
-          )
-        ),
-      ]);
+      const [statsRes, groupsRes] = await Promise.allSettled([getUserStats(), getMyGroups()]);
       if (cancelled) return;
-      setStats(statsData || []);
-      setGroups(groupsData || []);
-      setRankingBySub(Object.fromEntries(rankings));
+      const failed = statsRes.status === "rejected" || groupsRes.status === "rejected";
+      setStats(statsRes.status === "fulfilled" ? statsRes.value || [] : []);
+      setGroups(groupsRes.status === "fulfilled" ? groupsRes.value || [] : []);
+      setProfileFailed(failed);
       setProfileLoading(false);
+      if (failed) {
+        const toastId = showToast("No pudimos cargar tus datos.", "error", {
+          onRetry: () => {
+            hideToast(toastId);
+            setProfileReload((n) => n + 1);
+          },
+        });
+      }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [loading, tournament?.id, subdivisions]);
+  }, [profileReload, showToast, hideToast]);
 
-  const currentSubId = campaignSubId ?? subdivisions[0]?.id ?? null;
+  // Ranking is fetched lazily, only for the visible mini-tab, and each
+  // subdivision at most once (the endpoint has no LIMIT nor backend cache —
+  // fanning out to every subdivision on mount threw away 4 of 5 responses).
+  const requestedRankings = useRef(new Set());
+  useEffect(() => {
+    const tournamentId = tournament?.id;
+    if (!tournamentId || !currentSubId) return;
+    const key = `${tournamentId}:${currentSubId}`;
+    if (requestedRankings.current.has(key)) return;
+    requestedRankings.current.add(key);
+
+    getTournamentRanking(currentSubId, tournamentId)
+      .then((rows) => setRankingBySub((prev) => ({ ...prev, [currentSubId]: rows || [] })))
+      // Drop the key so revisiting the tab retries; a cached sub never refetches.
+      .catch(() => requestedRankings.current.delete(key));
+  }, [tournament?.id, currentSubId]);
+
   const fechaKey = fechaActual?.key ?? null;
 
   const allMatchesForFecha = fechaKey
@@ -118,8 +134,15 @@ const Dashboard = () => {
     Object.values(matchesBy[sub.id] || {}).some((list) => list.some((m) => m.savedPick))
   );
   const statsForTournament = stats.find((t) => t.id === tournament?.id)?.subdivisions || [];
+  // profileFailed guard: an empty stats/groups array we never actually received
+  // is not evidence of a new user — fall through to the real dashboard instead.
   const usuarioNuevo =
-    !loading && !profileLoading && !hasAnyPrediction && statsForTournament.length === 0 && groups.length === 0;
+    !loading &&
+    !profileLoading &&
+    !profileFailed &&
+    !hasAnyPrediction &&
+    statsForTournament.length === 0 &&
+    groups.length === 0;
 
   const statsBySubId = Object.fromEntries(statsForTournament.map((s) => [s.id, s.stats]));
   const campaignStats = statsBySubId[currentSubId] || {
@@ -178,7 +201,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {loading ? (
+        {loading || profileLoading ? (
           <div className="flex justify-center pt-10">
             <LoadingSpinner />
           </div>
