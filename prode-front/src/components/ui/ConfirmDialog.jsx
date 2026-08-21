@@ -1,37 +1,32 @@
-import PropTypes from "prop-types"
-import { X } from "lucide-react"
-import Button from "./Button"
+import PropTypes from "prop-types";
 
 const ConfirmDialog = ({ title, message, confirmLabel, cancelLabel, onConfirm, onCancel }) => {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md mx-4">
-        <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
-          <h2 className="text-lg font-medium">{title}</h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#050806] bg-opacity-80 px-4">
+      <div className="w-full max-w-[360px] bg-prode-surface border border-prode-border rounded-[10px] p-5 flex flex-col gap-2">
+        <div className="font-display text-[20px] font-[900] uppercase leading-[1.1]">{title}</div>
+        <p className="text-[14px] leading-[1.5] text-prode-text-muted">{message}</p>
+
+        <div className="flex gap-2 pt-[6px]">
           <button
+            type="button"
             onClick={onCancel}
-            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            className="flex-1 h-[48px] rounded-[6px] border border-prode-border-control text-[14px] font-[700] hover:bg-prode-surface-row transition-colors"
           >
-            <X className="h-5 w-5" />
+            {cancelLabel || "Cancelar"}
           </button>
-        </div>
-
-        <div className="p-4">
-          <p className="text-gray-600 dark:text-gray-400">{message}</p>
-
-          <div className="mt-6 flex justify-end space-x-3">
-            <Button type="button" variant="outline" onClick={onCancel}>
-              {cancelLabel || "Cancelar"}
-            </Button>
-            <Button type="button" variant="danger" onClick={onConfirm}>
-              {confirmLabel || "Confirmar"}
-            </Button>
-          </div>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="flex-1 h-[48px] rounded-[6px] bg-prode-destructive-bg text-white text-[14px] font-[800] hover:opacity-90 transition-opacity"
+          >
+            {confirmLabel || "Confirmar"}
+          </button>
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
 ConfirmDialog.propTypes = {
   title: PropTypes.string.isRequired,
@@ -40,6 +35,6 @@ ConfirmDialog.propTypes = {
   cancelLabel: PropTypes.string,
   onConfirm: PropTypes.func.isRequired,
   onCancel: PropTypes.func.isRequired,
-}
+};
 
-export default ConfirmDialog
+export default ConfirmDialog;

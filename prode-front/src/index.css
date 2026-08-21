@@ -34,6 +34,7 @@
   --color-prode-silver: var(--prode-silver);
   --color-prode-bronze: var(--prode-bronze);
   --color-prode-focus: var(--prode-focus);
+  --color-prode-destructive-bg: var(--prode-destructive-bg);
 
   --animate-fade-in: fade-in 0.2s ease-out forwards;
   --animate-slide-up: slide-up 0.2s ease-out forwards;
@@ -83,6 +84,7 @@
   --prode-silver: #98A399;
   --prode-bronze: #8A6D4A;
   --prode-focus: #0B0F0D;
+  --prode-destructive-bg: #9B2C24;
 }
 
 .dark {
@@ -121,6 +123,7 @@
   --prode-silver: #98A399;
   --prode-bronze: #8A6D4A;
   --prode-focus: #EDEFEA;
+  --prode-destructive-bg: #B3261E;
 
   color-scheme: dark;
 }
