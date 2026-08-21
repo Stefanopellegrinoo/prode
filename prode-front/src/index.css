@@ -108,6 +108,7 @@
   --prode-live: #B3261E;
   --prode-live-fg: #FFFFFF;
   --prode-warning: #FFB020;
+  /* Handoff only defines "Pendiente de envío" for light; dark bg is extrapolated, pending design confirmation. */
   --prode-warning-bg: #3A2E10;
 
   --prode-select-bg: #EDEFEA;

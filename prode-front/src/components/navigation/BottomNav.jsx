@@ -1,3 +1,4 @@
+import PropTypes from "prop-types";
 import { NavLink } from "react-router-dom";
 
 const navItems = [
@@ -8,16 +9,18 @@ const navItems = [
   { path: "/profile", label: "Perfil" },
 ];
 
-const BottomNav = () => {
+const BottomNav = ({ shellWidth = "max-w-[430px] md:max-w-[720px]" }) => {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 flex justify-center bg-prode-bg border-t border-prode-border">
-      <div className="w-full max-w-[430px] flex justify-between px-2 pt-2 pb-4">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 flex justify-center bg-prode-bg border-t border-prode-border">
+      <div
+        className={`w-full ${shellWidth} flex justify-between px-2 pt-2 pb-4`}
+      >
         {navItems.map((item) => (
           <NavLink
             key={item.path}
             to={item.path}
             className={({ isActive }) =>
-              `flex flex-col items-center gap-1 w-16 ${
+              `flex flex-col items-center gap-1 flex-1 ${
                 isActive ? "text-prode-text" : "text-prode-text-muted"
               }`
             }
@@ -45,6 +48,10 @@ const BottomNav = () => {
       </div>
     </nav>
   );
+};
+
+BottomNav.propTypes = {
+  shellWidth: PropTypes.string,
 };
 
 export default BottomNav;

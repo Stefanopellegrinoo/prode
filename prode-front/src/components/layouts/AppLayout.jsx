@@ -10,17 +10,18 @@ const SHELL_WIDTH = {
 const AppLayout = ({ children, showBottomNav = true, width = "default" }) => {
   const { isAuthenticated } = useAuth();
   const shellWidth = SHELL_WIDTH[width];
+  const hasBottomNav = isAuthenticated && showBottomNav;
 
   return (
     <div className="min-h-screen bg-prode-bg text-prode-text font-body flex flex-col items-center">
-      <div className={`w-full ${shellWidth} flex flex-col flex-1 pb-[88px] relative`}>
+      <div
+        className={`w-full ${shellWidth} flex flex-col flex-1 ${
+          hasBottomNav ? "pb-[88px]" : "pb-8"
+        } relative`}
+      >
         {children}
       </div>
-      {isAuthenticated && showBottomNav && (
-        <div className={`w-full ${shellWidth} fixed bottom-0 z-50`}>
-          <BottomNav />
-        </div>
-      )}
+      {hasBottomNav && <BottomNav shellWidth={shellWidth} />}
     </div>
   );
 };
