@@ -1,16 +1,7 @@
-import React from 'react'
-import DashboardLayout from '../components/layouts/DashboardLayout'
-import MatchesPage from '../components/admin/MatchesPage'
+import Ranking from "./Ranking";
 
 const TournamentRanking = () => {
-  return (
-    <DashboardLayout title="Ranking de los torneos"> 
-    
-    <MatchesPage type={'pronostico'}/>
-    </DashboardLayout>
+  return <Ranking />;
+};
 
-    
-  )
-}
-
-export default TournamentRanking
+export default TournamentRanking;

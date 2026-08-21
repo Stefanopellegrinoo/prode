@@ -1,53 +1,127 @@
 @import "tailwindcss";
 
+@theme {
+  --font-display: "Archivo", sans-serif;
+  --font-body: "Hanken Grotesk", sans-serif;
+  
+  --color-prode-bg: var(--prode-bg);
+  --color-prode-canvas: var(--prode-canvas);
+  --color-prode-surface: var(--prode-surface);
+  --color-prode-surface-row: var(--prode-surface-row);
+  --color-prode-elevated: var(--prode-elevated);
+  --color-prode-border: var(--prode-border);
+  --color-prode-border-control: var(--prode-border-control);
+  --color-prode-border-divider: var(--prode-border-divider);
+  --color-prode-text: var(--prode-text);
+  --color-prode-text-muted: var(--prode-text-muted);
+  --color-prode-text-disabled: var(--prode-text-disabled);
+  --color-prode-primary: var(--prode-primary);
+  --color-prode-success: var(--prode-success);
+  --color-prode-success-bg: var(--prode-success-bg);
+  --color-prode-error: var(--prode-error);
+  --color-prode-error-bg: var(--prode-error-bg);
+  --color-prode-live: var(--prode-live);
+  --color-prode-warning: var(--prode-warning);
+  --color-prode-warning-bg: var(--prode-warning-bg);
+
+  --animate-fade-in: fade-in 0.2s ease-out forwards;
+  --animate-slide-up: slide-up 0.2s ease-out forwards;
+
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes slide-up {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+}
+
 :root {
-  --primary: #0f766e;
-  --primary-dark: #0c5954;
-  --primary-light: #14b8a6;
+  /* Light */
+  --prode-bg: #EDEFEA;
+  --prode-canvas: #E4E7E1;
+  --prode-surface: #FFFFFF;
+  --prode-surface-row: #FFFFFF;
+  --prode-elevated: #DDE2DA;
+  --prode-border: #C9D1C8;
+  --prode-border-control: #A8B1A7;
+  --prode-border-divider: #E2E6DF;
+  
+  --prode-text: #0B0F0D;
+  --prode-text-muted: #4A544B;
+  --prode-text-disabled: #6B756C;
+  
+  --prode-primary: #1F7A54;
+  --prode-success: #166B47;
+  --prode-success-bg: #CFE8DA;
+  --prode-error: #9B2C24;
+  --prode-error-bg: #F3D9D7;
+  --prode-live: #B3261E;
+  --prode-warning: #8A6D1F;
+  --prode-warning-bg: #F5E9CF;
+}
+
+.dark {
+  /* Dark */
+  --prode-bg: #0B0F0D;
+  --prode-canvas: #0B0F0D;
+  --prode-surface: #131A16;
+  --prode-surface-row: #0F1511;
+  --prode-elevated: #1C2620;
+  --prode-border: #253029;
+  --prode-border-control: #3A473F;
+  --prode-border-divider: #1C2620;
+  
+  --prode-text: #EDEFEA;
+  --prode-text-muted: #98A399;
+  --prode-text-disabled: #5A6660;
+  
+  --prode-primary: #1F7A54;
+  --prode-success: #7BD8A8;
+  --prode-success-bg: #123B2A;
+  --prode-error: #E88B8B;
+  --prode-error-bg: #3A1D1D;
+  --prode-live: #B3261E;
+  --prode-warning: #FFB020;
+  --prode-warning-bg: #F5E9CF;
+
+  color-scheme: dark;
 }
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans",
-    "Droid Sans", "Helvetica Neue", sans-serif;
+  background-color: var(--prode-bg);
+  color: var(--prode-text);
+  font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Dark mode styles */
-.dark {
-  color-scheme: dark;
+/* Base resets */
+a {
+  color: inherit;
+  text-decoration: none;
+}
+* {
+  box-sizing: border-box;
 }
 
-/* Custom scrollbar */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Custom scrollbar handling */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 0px;
+  background: transparent;
 }
-
-::-webkit-scrollbar-track {
-  background: #f1f1f1;
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
 }
-
-.dark ::-webkit-scrollbar-track {
-  background: #1f2937;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 4px;
-}
-
-.dark ::-webkit-scrollbar-thumb {
-  background: #4b5563;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #a1a1a1;
-}
-
-.dark ::-webkit-scrollbar-thumb:hover {
-  background: #6b7280;
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }
 
 /* Input number arrows */

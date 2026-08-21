@@ -1,344 +1,245 @@
 import { useState, useEffect } from "react";
-import DashboardLayout from "../components/layouts/DashboardLayout";
-import Card from "../components/ui/Card";
-import Button from "../components/ui/Button";
-import InputField from "../components/form/InputField";
-import { User, Mail, Key, Award, Shield } from "lucide-react";
-import {
-  getUserProfile,
-  updateUserProfile,
-  updatePassword,
-  getUserStats,
-} from "../services/userService";
-import { useToast } from "../hooks/useToast";
+import AppLayout from "../components/layouts/AppLayout";
 import { useAuth } from "../context/AuthContext";
-import LoadingSpinner from "../components/ui/LoadingSpinner";
-import UserStatsCard from "../components/dashboard/UserStatsCard";
+import { getUserStats, updateUserProfile, updatePassword } from "../services/userService";
+import { useToast } from "../hooks/useToast";
 
 const Profile = () => {
-  const [profileData, setProfileData] = useState({
-    name: "",
-    username: "",
-    email: "",
-    avatar: "",
-  });
-  const [passwordData, setPasswordData] = useState({
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: "",
-  });
-  const [loading, setLoading] = useState(true);
-  const [savingProfile, setSavingProfile] = useState(false);
-  const [savingPassword, setSavingPassword] = useState(false);
-  const [profileErrors, setProfileErrors] = useState({});
-  const [passwordErrors, setPasswordErrors] = useState({});
-  const [stats, setStats] = useState(null);
+  const { currentUser, logout, setCurrentUser } = useAuth(); // useAuth provides currentUser in AuthContext
   const { showToast, ToastContainer } = useToast();
-  const { currentUser } = useAuth();
+  
+  // Account data
+  const [name, setName] = useState(currentUser?.name || "");
+  const [username, setUsername] = useState(currentUser?.username || "");
+  const [email, setEmail] = useState(currentUser?.email || "");
+  const [club, setClub] = useState(currentUser?.club || "URBA");
+  
+  const [savedPersonal, setSavedPersonal] = useState(false);
+  const [savingPersonal, setSavingPersonal] = useState(false);
+  
+  const [passOpen, setPassOpen] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [savingPass, setSavingPass] = useState(false);
+
+  const [stats, setStats] = useState(null);
 
   useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        setLoading(true);
-        const [st, data ] = await Promise.all([getUserStats(), getUserProfile()])
-        // const st = await getUserStats();
-        // const data = await getUserProfile();
+    // If user changes, update fields
+    if (currentUser) {
+      setName(currentUser.name || "");
+      setUsername(currentUser.username || "");
+      setEmail(currentUser.email || "");
+      setClub(currentUser.club || "URBA");
+    }
+  }, [currentUser]);
 
-        setProfileData({
-          name: data.name || "",
-          username: data.username || "",
-          email: data.email || "",
-          avatar: data.avatar || "",
-        });
-        setStats(st);
-      } catch (error) {
-        console.error("Error fetching profile:", error);
-        showToast("Error al cargar el perfil", "error");
-      } finally {
-        setLoading(false);
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const data = await getUserStats();
+        setStats(data);
+      } catch (err) {
+        console.error("Error fetching stats for profile", err);
       }
     };
+    fetchStats();
+  }, []);
 
-    fetchProfile();
-  }, [showToast]);
-
-  const validateProfileForm = () => {
-    const newErrors = {};
-
-    if (!profileData.name.trim()) {
-      newErrors.name = "El nombre es requerido";
-    }
-
-    if (!profileData.email.trim()) {
-      newErrors.email = "El email es requerido";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profileData.email)) {
-      newErrors.email = "Ingrese un email válido";
-    }
-
-    setProfileErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const validatePasswordForm = () => {
-    const newErrors = {};
-
-    if (!passwordData.currentPassword) {
-      newErrors.currentPassword = "La contraseña actual es requerida";
-    }
-
-    if (!passwordData.newPassword) {
-      newErrors.newPassword = "La nueva contraseña es requerida";
-    } else if (passwordData.newPassword.length < 8) {
-      newErrors.newPassword = "La contraseña debe tener al menos 8 caracteres";
-    }
-
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      newErrors.confirmPassword = "Las contraseñas no coinciden";
-    }
-
-    setPasswordErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleProfileChange = (e) => {
-    const { name, value } = e.target;
-    setProfileData({ ...profileData, [name]: value });
-
-    // Clear error when user starts typing
-    if (profileErrors[name]) {
-      setProfileErrors({ ...profileErrors, [name]: "" });
-    }
-  };
-
-  const handlePasswordChange = (e) => {
-    const { name, value } = e.target;
-    setPasswordData({ ...passwordData, [name]: value });
-
-    // Clear error when user starts typing
-    if (passwordErrors[name]) {
-      setPasswordErrors({ ...passwordErrors, [name]: "" });
-    }
-  };
-
-  const handleProfileSubmit = async (e) => {
+  const handleSavePersonal = async (e) => {
     e.preventDefault();
-
-    if (!validateProfileForm()) return;
-
+    setSavingPersonal(true);
     try {
-      setSavingProfile(true);
-      await updateUserProfile(profileData);
-      showToast("Perfil actualizado correctamente", "success");
-    } catch (error) {
-      console.error("Error updating profile:", error);
-      showToast(error.message || "Error al actualizar el perfil", "error");
+      const updated = await updateUserProfile({ name, username, email, club });
+      setCurrentUser(updated); // Update context
+      setSavedPersonal(true);
+      setTimeout(() => setSavedPersonal(false), 1800);
+      showToast("Datos actualizados correctamente", "success");
+    } catch (err) {
+      showToast(err.message || "Error al actualizar los datos", "error");
     } finally {
-      setSavingProfile(false);
+      setSavingPersonal(false);
     }
   };
 
-  const handlePasswordSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!validatePasswordForm()) return;
-
+  const handleSavePassword = async () => {
+    if (newPassword !== confirmPassword) {
+      showToast("Las contraseñas no coinciden", "error");
+      return;
+    }
+    if (!currentPassword || !newPassword) {
+      showToast("Completá todos los campos", "error");
+      return;
+    }
+    setSavingPass(true);
     try {
-      setSavingPassword(true);
-      await updatePassword(passwordData);
-      setPasswordData({
-        currentPassword: "",
-        newPassword: "",
-        confirmPassword: "",
-      });
-      showToast("Contraseña actualizada correctamente", "success");
-    } catch (error) {
-      console.error("Error updating password:", error);
-      showToast(error.message || "Error al actualizar la contraseña", "error");
+      await updatePassword({ currentPassword, newPassword });
+      setPassOpen(false);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      showToast("Contraseña actualizada con éxito", "success");
+    } catch (err) {
+      showToast(err.message || "Error al cambiar la contraseña", "error");
     } finally {
-      setSavingPassword(false);
+      setSavingPass(false);
     }
   };
 
-  if (loading) {
-    return (
-      <DashboardLayout title="Mi Perfil">
-        <div className="flex justify-center py-8">
-          <LoadingSpinner />
-        </div>
-      </DashboardLayout>
-    );
-  }
+  const initials = name ? name.substring(0,2).toUpperCase() : "MB";
+
+  const InputLabel = ({ label }) => (
+    <div className="text-[12px] font-[800] uppercase tracking-[0.1em] text-prode-text-muted mb-1">
+      {label}
+    </div>
+  );
 
   return (
-    <DashboardLayout title="Mi Perfil">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <Card
-            title="Información Personal"
-            icon={<User className="h-5 w-5" />}
-          >
-            <form onSubmit={handleProfileSubmit} className="space-y-4">
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="w-full">
-                  <div className="w-full">
-                    <InputField
-                      label="Nombre"
-                      name="name"
-                      value={profileData.name}
-                      onChange={handleProfileChange}
-                      error={profileErrors.name}
-                      disabled={true}
-                      
-                    />
-                  </div>
-                  <div className="w-full mt-2">
-                    <InputField
-                      label="Nombre de usuario"
-                      name="name"
-                      value={profileData.username}
-                      onChange={handleProfileChange}
-                      error={profileErrors.username}
-                      disabled={true}
-                      
-                    />
-                  </div>
-                </div>
-                <div className="w-full">
-                  <InputField
-                    label="Email"
-                    name="email"
-                    type="email"
-                    value={profileData.email}
-                    onChange={handleProfileChange}
-                    error={profileErrors.email}
-                    disabled={!currentUser?.isAdmin} // Only admins can change email
-                    
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end">
-                <Button type="submit" loading={savingProfile}>
-                  Guardar Cambios
-                </Button>
-              </div>
-            </form>
-          </Card>
-
-          <Card
-            title="Cambiar Contraseña"
-            icon={<Key className="h-5 w-5" />}
-            className="mt-6"
-          >
-            <form onSubmit={handlePasswordSubmit} className="space-y-4">
-              <InputField
-                label="Contraseña Actual"
-                name="currentPassword"
-                type="password"
-                value={passwordData.currentPassword}
-                onChange={handlePasswordChange}
-                error={passwordErrors.currentPassword}
-                required
-              />
-
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="w-full">
-                  <InputField
-                    label="Nueva Contraseña"
-                    name="newPassword"
-                    type="password"
-                    value={passwordData.newPassword}
-                    onChange={handlePasswordChange}
-                    error={passwordErrors.newPassword}
-                    required
-                  />
-                </div>
-                <div className="w-full">
-                  <InputField
-                    label="Confirmar Contraseña"
-                    name="confirmPassword"
-                    type="password"
-                    value={passwordData.confirmPassword}
-                    onChange={handlePasswordChange}
-                    error={passwordErrors.confirmPassword}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end">
-                <Button type="submit" loading={savingPassword}>
-                  Actualizar Contraseña
-                </Button>
-              </div>
-            </form>
-          </Card>
+    <AppLayout showBottomNav={true}>
+      <div className="flex flex-col min-h-screen">
+        {/* Header */}
+        <div className="px-4 pt-[24px] pb-6 flex flex-col items-center gap-[12px] border-b border-prode-border text-center">
+          <div className="w-[56px] h-[56px] rounded-[10px] bg-prode-elevated flex items-center justify-center text-[20px] font-[700] text-prode-text-muted">
+            {initials}
+          </div>
+          <div className="flex flex-col gap-[2px]">
+            <div className="font-display text-[22px] font-[900] tracking-[-0.01em] uppercase">
+              {name}
+            </div>
+            <div className="text-[14px] font-[600] text-prode-text-muted">
+              @{username} · {club}
+            </div>
+          </div>
         </div>
 
-        <div>
-          {/* <Card title="Estadísticas" icon={<Award className="h-5 w-5" />}>
-            {stats ? (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Puntos Totales</span>
-                  <span className="font-bold text-lg">{stats.totalPoints}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Posición Global</span>
-                  <span className="font-bold text-lg">#{stats.globalRank}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Pronósticos Realizados</span>
-                  <span className="font-bold text-lg">{stats.totalPredictions}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Pronósticos Acertados</span>
-                  <span className="font-bold text-lg">{stats.correctPredictions}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600 dark:text-gray-400">Precisión</span>
-                  <span className="font-bold text-lg">{stats.accuracy}%</span>
-                </div>
+        {/* Stats */}
+        <div className="p-4 grid grid-cols-2 gap-2 border-b border-prode-border">
+          <div className="bg-prode-surface border border-prode-border rounded-[8px] p-3 flex flex-col items-center gap-[2px]">
+            <div className="font-display text-[24px] font-[900] tabular-nums">{stats?.totalPoints || 0}</div>
+            <div className="text-[11px] font-[800] uppercase tracking-[0.06em] text-prode-text-muted">Puntos</div>
+          </div>
+          <div className="bg-prode-surface border border-prode-border rounded-[8px] p-3 flex flex-col items-center gap-[2px]">
+            <div className="font-display text-[24px] font-[900] tabular-nums">#{stats?.rankingPosition || "-"}</div>
+            <div className="text-[11px] font-[800] uppercase tracking-[0.06em] text-prode-text-muted">General</div>
+          </div>
+        </div>
+
+        {/* Form Account */}
+        <form onSubmit={handleSavePersonal} className="p-4 flex flex-col gap-4">
+          <div className="font-display text-[17px] font-[800] uppercase tracking-[0.02em] mb-1">
+            Datos de la cuenta
+          </div>
+          
+          <div>
+            <InputLabel label="Nombre completo" />
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full h-[52px] bg-prode-surface border border-prode-border-control rounded-[6px] px-4 text-[15px] outline-none focus:border-prode-text transition-colors"
+            />
+          </div>
+          <div>
+            <InputLabel label="Usuario" />
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="w-full h-[52px] bg-prode-surface border border-prode-border-control rounded-[6px] px-4 text-[15px] outline-none focus:border-prode-text transition-colors"
+            />
+          </div>
+          <div>
+            <InputLabel label="Email" />
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full h-[52px] bg-prode-surface border border-prode-border-control rounded-[6px] px-4 text-[15px] outline-none focus:border-prode-text transition-colors"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={savingPersonal}
+            className={`w-full h-[52px] rounded-[6px] text-[15px] font-[800] uppercase transition-colors mt-2 ${
+              savedPersonal
+                ? "bg-prode-success text-prode-bg"
+                : "bg-prode-text text-prode-bg hover:opacity-90"
+            }`}
+          >
+            {savingPersonal ? "Guardando..." : savedPersonal ? "✓ Guardado" : "Guardar cambios"}
+          </button>
+        </form>
+
+        {/* Security Accordion */}
+        <div className="p-4 flex flex-col gap-4 border-t border-prode-border border-b">
+          <div className="font-display text-[17px] font-[800] uppercase tracking-[0.02em] mb-1">
+            Seguridad
+          </div>
+          
+          <button
+            type="button"
+            onClick={() => setPassOpen(!passOpen)}
+            className="flex items-center justify-between w-full h-[52px] bg-prode-surface border border-prode-border-control rounded-[6px] px-4 text-[15px] font-[700]"
+          >
+            <span>Cambiar contraseña</span>
+            <span className="font-display font-[900] text-prode-text-muted">{passOpen ? "▲" : "▼"}</span>
+          </button>
+
+          {passOpen && (
+            <div className="flex flex-col gap-4 animate-slide-up origin-top">
+              <div>
+                <InputLabel label="Contraseña actual" />
+                <input
+                  type="password"
+                  value={currentPassword}
+                  onChange={e => setCurrentPassword(e.target.value)}
+                  className="w-full h-[52px] bg-prode-surface border border-prode-border-control rounded-[6px] px-4 text-[15px] outline-none focus:border-prode-text transition-colors"
+                />
               </div>
-            ) : (
-              <div className="text-center py-4 text-gray-500 dark:text-gray-400">
-                No hay estadísticas disponibles
+              <div>
+                <InputLabel label="Nueva contraseña" />
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={e => setNewPassword(e.target.value)}
+                  className="w-full h-[52px] bg-prode-surface border border-prode-border-control rounded-[6px] px-4 text-[15px] outline-none focus:border-prode-text transition-colors"
+                />
               </div>
-            )}
-          </Card> */}
-          <UserStatsCard stats={stats} />
-          {currentUser?.isAdmin && (
-            <Card
-              title="Administración"
-              icon={<Shield className="h-5 w-5" />}
-              className="mt-6"
-            >
-              <div className="space-y-4">
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Tienes permisos de administrador en esta plataforma.
-                </p>
-                <Button
-                  variant="outline"
-                  fullWidth
-                  onClick={() => (window.location.href = "/admin/fixture")}
-                >
-                  Administrar Fixture
-                </Button>
-                <Button
-                  variant="outline"
-                  fullWidth
-                  onClick={() => (window.location.href = "/admin/users")}
-                >
-                  Administrar Usuarios
-                </Button>
+              <div>
+                <InputLabel label="Repetir nueva contraseña" />
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={e => setConfirmPassword(e.target.value)}
+                  className="w-full h-[52px] bg-prode-surface border border-prode-border-control rounded-[6px] px-4 text-[15px] outline-none focus:border-prode-text transition-colors"
+                />
               </div>
-            </Card>
+              <button
+                type="button"
+                onClick={handleSavePassword}
+                disabled={savingPass}
+                className="w-full h-[52px] border border-prode-border-control rounded-[6px] text-[15px] font-[800] uppercase hover:bg-prode-surface-row transition-colors mt-2"
+              >
+                {savingPass ? "Actualizando..." : "Actualizar contraseña"}
+              </button>
+            </div>
           )}
         </div>
-      </div>
 
+        {/* Logout */}
+        <div className="p-4 pt-6 pb-8">
+          <button
+            onClick={logout}
+            className="w-full h-[52px] border border-prode-error text-prode-error rounded-[6px] text-[15px] font-[800] uppercase hover:bg-prode-error-bg transition-colors"
+          >
+            Cerrar sesión
+          </button>
+        </div>
+      </div>
       <ToastContainer />
-    </DashboardLayout>
+    </AppLayout>
   );
 };
 

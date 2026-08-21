@@ -10,6 +10,7 @@ import LoadingSpinner from './components/ui/LoadingSpinner';
 // Lazy load pages for better performance
 const Login = lazy(() => import('./pages/Login'));
 const Register = lazy(() => import('./pages/Register'));
+const Landing = lazy(() => import('./pages/Landing'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Predictions = lazy(() => import('./pages/Predictions'));
 const FixtureAdmin = lazy(() => import('./pages/FixtureAdmin'));
@@ -32,7 +33,7 @@ function App() {
           <Suspense fallback={<LoadingSpinner />}>
             <Routes>
               {/* Public Routes */}
-              <Route path="/" element={<PublicRoute><Login /></PublicRoute>} />
+              <Route path="/" element={<PublicRoute><Landing /></PublicRoute>} />
               <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
               <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
               {/* <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} /> */}
