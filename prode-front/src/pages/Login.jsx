@@ -3,12 +3,12 @@ import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import AppLayout from "../components/layouts/AppLayout";
 
-const Login = () => {
+const Login = ({ initialMode = "login" }) => {
   const navigate = useNavigate();
   const { login, register } = useAuth();
-  
+
   // Single component replacing both Login and Register
-  const [mode, setMode] = useState("login"); // 'login' | 'register'
+  const [mode, setMode] = useState(initialMode); // 'login' | 'register'
   
   // Fields
   const [email, setEmail] = useState("");

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import AppLayout from "../components/layouts/AppLayout";
 import StatusBadge from "../components/fixture/StatusBadge";
-import { getMyGroups, joinGroup } from "../services/groupService";
+import { getMyGroups, joinGroup, createGroup } from "../services/groupService";
 import { useAuth } from "../context/AuthContext";
 import LoadingSpinner from "../components/ui/LoadingSpinner";
 

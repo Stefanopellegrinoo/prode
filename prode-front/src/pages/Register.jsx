@@ -1,7 +1,7 @@
 import Login from "./Login";
 
 const Register = () => {
-  return <Login />;
+  return <Login initialMode="register" />;
 };
 
 export default Register;

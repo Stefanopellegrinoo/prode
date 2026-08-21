@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Suspense, lazy } from 'react';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { AlertProvider } from './context/AlertContext';
 import ProtectedRoute from './components/routing/ProtectedRoute';
 import PublicRoute from './components/routing/PublicRoute';
 import AdminRoute from './components/routing/AdminRoute';
@@ -17,7 +18,6 @@ const FixtureAdmin = lazy(() => import('./pages/FixtureAdmin'));
 const Groups = lazy(() => import('./pages/Groups'));
 const Profile = lazy(() => import('./pages/Profile'));
 const MatchDetail = lazy(() => import('./pages/MatchDetail'));
-const TournamentRanking = lazy(() => import('./pages/TournamentRanking'));
 const Ranking = lazy(() => import('./pages/Ranking'));
 const GroupDetail = lazy(() => import("./pages/GroupDetail"))
 const TournamentFixtures = lazy(() => import("./pages/TournamentFixtures"))
@@ -28,42 +28,42 @@ const TournamentFixtures = lazy(() => import("./pages/TournamentFixtures"))
 function App() {
   return (
     <ThemeProvider>
-      <AuthProvider>
-        <Router>
-          <Suspense fallback={<LoadingSpinner />}>
-            <Routes>
-              {/* Public Routes */}
-              <Route path="/" element={<PublicRoute><Landing /></PublicRoute>} />
-              <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-              <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
-              {/* <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} /> */}
-              
-           
-  
-              <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-              <Route path="/predictions" element={<ProtectedRoute><Predictions /></ProtectedRoute>} />
-              <Route path="/groups" element={<ProtectedRoute><Groups /></ProtectedRoute>} />
-              <Route
-                path="/groups/:id"
-                element={
-                  <ProtectedRoute>
-                    <GroupDetail />
-                  </ProtectedRoute>
-                }
-              />
-              <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-              <Route path="/ranking" element={<ProtectedRoute><TournamentRanking /></ProtectedRoute>} />
-              <Route path="/ranking/:id" element={<ProtectedRoute><Ranking /></ProtectedRoute>} />
-              <Route path="/match/:id" element={<ProtectedRoute><TournamentFixtures /></ProtectedRoute>} />
+      <AlertProvider>
+        <AuthProvider>
+          <Router>
+            <Suspense fallback={<LoadingSpinner />}>
+              <Routes>
+                {/* Public Routes */}
+                <Route path="/" element={<PublicRoute><Landing /></PublicRoute>} />
+                <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+                <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+                {/* <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} /> */}
 
-              <Route path="/admin/fixture" element={<AdminRoute><FixtureAdmin /></AdminRoute>} />
-              
-              {/* <Route path="/404" element={<NotFound />} />
-              <Route path="*" element={<Navigate to="/404" replace />} /> */}
-            </Routes>
-          </Suspense>
-        </Router>
-      </AuthProvider>
+                <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                <Route path="/predictions" element={<ProtectedRoute><Predictions /></ProtectedRoute>} />
+                <Route path="/groups" element={<ProtectedRoute><Groups /></ProtectedRoute>} />
+                <Route
+                  path="/groups/:id"
+                  element={
+                    <ProtectedRoute>
+                      <GroupDetail />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+                <Route path="/ranking" element={<ProtectedRoute><Ranking /></ProtectedRoute>} />
+                <Route path="/ranking/:id" element={<ProtectedRoute><Ranking /></ProtectedRoute>} />
+                <Route path="/match/:id" element={<ProtectedRoute><TournamentFixtures /></ProtectedRoute>} />
+
+                <Route path="/admin/fixture" element={<AdminRoute><FixtureAdmin /></AdminRoute>} />
+
+                {/* <Route path="/404" element={<NotFound />} />
+                <Route path="*" element={<Navigate to="/404" replace />} /> */}
+              </Routes>
+            </Suspense>
+          </Router>
+        </AuthProvider>
+      </AlertProvider>
     </ThemeProvider>
   );
 }
