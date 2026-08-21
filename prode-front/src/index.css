@@ -87,6 +87,46 @@
   --prode-destructive-bg: #9B2C24;
 }
 
+.light {
+  /* Light (forced regardless of ancestor .dark — used by Landing, ADR-2) */
+  --prode-bg: #EDEFEA;
+  --prode-canvas: #E4E7E1;
+  --prode-surface: #FFFFFF;
+  --prode-surface-row: #FFFFFF;
+  --prode-elevated: #DDE2DA;
+  --prode-border: #C9D1C8;
+  --prode-border-control: #A8B1A7;
+  --prode-border-divider: #E2E6DF;
+
+  --prode-text: #0B0F0D;
+  --prode-text-muted: #4A544B;
+  --prode-text-disabled: #6B756C;
+
+  --prode-primary: #1F7A54;
+  --prode-success: #166B47;
+  --prode-success-bg: #CFE8DA;
+  --prode-error: #9B2C24;
+  --prode-error-bg: #F3D9D7;
+  --prode-live: #B3261E;
+  --prode-live-fg: #FFFFFF;
+  --prode-warning: #8A6D1F;
+  --prode-warning-bg: #F5E9CF;
+
+  --prode-select-bg: #0B0F0D;
+  --prode-select-fg: #EDEFEA;
+  --prode-plate-locked-bg: #F4F6F2;
+  --prode-plate-locked-fg: #A8B1A7;
+  --prode-plate-locked-border: #DDE2DA;
+  --prode-plate-locked-selected-opacity: 0.5;
+  --prode-gold: #D8B54A;
+  --prode-silver: #98A399;
+  --prode-bronze: #8A6D4A;
+  --prode-focus: #0B0F0D;
+  --prode-destructive-bg: #9B2C24;
+
+  color-scheme: light;
+}
+
 .dark {
   /* Dark */
   --prode-bg: #0B0F0D;
