@@ -2,14 +2,19 @@ import PropTypes from "prop-types";
 
 const DrawBar = ({ isSelected, isLocked, onClick }) => {
   const baseClasses =
-    "h-[44px] rounded-[6px] flex items-center justify-center text-[14px] font-[700] uppercase tracking-[0.06em] transition-colors duration-150 cursor-pointer w-full mt-[6px]";
+    "h-[44px] rounded-[6px] flex items-center justify-center text-[14px] font-[700] uppercase tracking-[0.06em] transition-colors duration-120 cursor-pointer w-full mt-[6px]";
+
+  const lockedSelectedStyle = isLocked && isSelected
+    ? { opacity: "var(--prode-plate-locked-selected-opacity)" }
+    : undefined;
 
   let stateClasses = "";
   if (isLocked) {
     if (isSelected) {
-      stateClasses = "bg-prode-text text-prode-bg opacity-55 cursor-default";
+      stateClasses = "bg-prode-text text-prode-bg cursor-default";
     } else {
-      stateClasses = "bg-[#141A16] text-[#3A473F] cursor-default";
+      stateClasses =
+        "bg-prode-plate-locked-bg text-prode-plate-locked-fg border border-prode-plate-locked-border cursor-default";
     }
   } else {
     if (isSelected) {
@@ -24,6 +29,7 @@ const DrawBar = ({ isSelected, isLocked, onClick }) => {
       type="button"
       onClick={isLocked ? undefined : onClick}
       className={`${baseClasses} ${stateClasses}`}
+      style={lockedSelectedStyle}
       disabled={isLocked}
     >
       Empate
