@@ -3,6 +3,7 @@ import { Suspense, lazy } from 'react';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { AlertProvider } from './context/AlertContext';
+import { TournamentProvider } from './context/TournamentContext';
 import ProtectedRoute from './components/routing/ProtectedRoute';
 import PublicRoute from './components/routing/PublicRoute';
 import AdminRoute from './components/routing/AdminRoute';
@@ -40,7 +41,16 @@ function App() {
                 {/* <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} /> */}
 
                 <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-                <Route path="/predictions" element={<ProtectedRoute><Predictions /></ProtectedRoute>} />
+                <Route
+                  path="/predictions"
+                  element={
+                    <ProtectedRoute>
+                      <TournamentProvider>
+                        <Predictions />
+                      </TournamentProvider>
+                    </ProtectedRoute>
+                  }
+                />
                 <Route path="/groups" element={<ProtectedRoute><Groups /></ProtectedRoute>} />
                 <Route
                   path="/groups/:id"
