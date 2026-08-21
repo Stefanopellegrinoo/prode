@@ -1,133 +1,344 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import AppLayout from "../components/layouts/AppLayout";
-import TeamPlate from "../components/fixture/TeamPlate";
-import DrawBar from "../components/fixture/DrawBar";
-import StatusBadge from "../components/fixture/StatusBadge";
-import { getUpcomingMatches } from "../services/matchService";
-import { getUserStats } from "../services/userService";
+import StatCard from "../components/ui/StatCard";
+import ProgressSegments from "../components/ui/ProgressSegments";
 import LoadingSpinner from "../components/ui/LoadingSpinner";
+import { useTournament } from "../context/TournamentContext";
+import { useAuth } from "../context/AuthContext";
+import { useTheme } from "../context/ThemeContext";
+import { getUserStats } from "../services/userService";
+import { getMyGroups } from "../services/groupService";
+import { getTournamentRanking } from "../services/rankingService";
+import { POINTS } from "../config/constants";
+
+const WEEKDAYS_FULL = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+const MONTHS_FULL = [
+  "enero", "febrero", "marzo", "abril", "mayo", "junio",
+  "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+];
+const WEEKDAYS_SHORT = ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"];
+
+// Same deterministic-locale reasoning as Predictions.jsx (F1.9) — avoids
+// toLocaleDateString's runtime/browser locale mismatch.
+const formatHeaderDate = (date) =>
+  `${WEEKDAYS_FULL[date.getDay()]} ${date.getDate()} de ${MONTHS_FULL[date.getMonth()]}`;
+
+const kickoffLabel = (match) => `${WEEKDAYS_SHORT[match.kickoff.getDay()]} ${match.time}`;
+
+// Never invent a score/points number the backend didn't produce (ADR-9) — same
+// win/draw/miss mapping Predictions.jsx already applies to its own badges.
+const outcomeFor = (match) => {
+  if (!match.savedPick || !match.result) return { correct: false, points: 0 };
+  const correct = match.savedPick === match.result;
+  return { correct, points: correct ? (match.savedPick === "draw" ? POINTS.DRAW : POINTS.WIN) : POINTS.MISS };
+};
+
+const sideLabel = (match, pick) => {
+  if (pick === "draw") return "empate";
+  if (pick === "home") return match.home.shortName;
+  if (pick === "away") return match.away.shortName;
+  return null;
+};
 
 const Dashboard = () => {
-  const [upcomingMatches, setUpcomingMatches] = useState([]);
-  const [userStats, setUserStats] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { currentUser } = useAuth();
+  const { darkMode } = useTheme();
+  const { tournament, subdivisions, fechas, fechaActual, matchesBy, loading, error } = useTournament();
 
+  const [campaignSubId, setCampaignSubId] = useState(null);
+  const [stats, setStats] = useState([]);
+  const [groups, setGroups] = useState([]);
+  const [rankingBySub, setRankingBySub] = useState({});
+  const [profileLoading, setProfileLoading] = useState(true);
+
+  // Fetched once when the tournament/subdivisions resolve — never refetched on
+  // tab switches (spec scenario "cambio de tab sin refetch"). Reuses services
+  // that already exist for other screens (getUserStats, getMyGroups,
+  // getTournamentRanking) — no new backend endpoints.
   useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        setLoading(true);
-        const [matchesData, statsData] = await Promise.all([
-          getUpcomingMatches(),
-          getUserStats().catch(() => null), // stats might fail if not admin or missing
-        ]);
-        setUpcomingMatches(matchesData || []);
-        setUserStats(statsData);
-      } catch (error) {
-        console.error("Error fetching dashboard data:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+    if (loading) return;
+    if (!tournament?.id) {
+      // sinFixture / no tournament at all — nothing to profile-fetch, don't
+      // get stuck showing profileLoading forever.
+      setProfileLoading(false);
+      return;
+    }
+    let cancelled = false;
 
-    fetchDashboardData();
-  }, []);
+    (async () => {
+      setProfileLoading(true);
+      const [statsData, groupsData, rankings] = await Promise.all([
+        getUserStats().catch(() => []),
+        getMyGroups().catch(() => []),
+        Promise.all(
+          subdivisions.map((sub) =>
+            getTournamentRanking(sub.id, tournament.id)
+              .then((rows) => [sub.id, rows || []])
+              .catch(() => [sub.id, []])
+          )
+        ),
+      ]);
+      if (cancelled) return;
+      setStats(statsData || []);
+      setGroups(groupsData || []);
+      setRankingBySub(Object.fromEntries(rankings));
+      setProfileLoading(false);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [loading, tournament?.id, subdivisions]);
+
+  const currentSubId = campaignSubId ?? subdivisions[0]?.id ?? null;
+  const fechaKey = fechaActual?.key ?? null;
+
+  const allMatchesForFecha = fechaKey
+    ? subdivisions.flatMap((sub) => matchesBy[sub.id]?.[fechaKey] ?? [])
+    : [];
+  const totalAll = allMatchesForFecha.length;
+  const totalDone = allMatchesForFecha.filter((m) => m.savedPick).length;
+  const totalPending = totalAll - totalDone;
+  const earliestMatch = allMatchesForFecha.length
+    ? allMatchesForFecha.reduce((earliest, m) => (m.kickoff < earliest.kickoff ? m : earliest))
+    : null;
+  const closingLabel = earliestMatch ? kickoffLabel(earliestMatch) : null;
+
+  const fechaLabel = fechaActual
+    ? `Fecha ${fechaActual.number}${closingLabel ? ` · cierra ${closingLabel}` : ""}`
+    : "Fecha —";
+
+  // "Sin predicciones" derived from the fixture already in context (accurate
+  // even before any match is graded) — not from /users/stats, whose rows only
+  // exist once a match finishes (calculatePoints.worker.js), which would
+  // otherwise misclassify an active early-season user as "nuevo". ANDed with
+  // the stats/groups signals so a real edge case never hides real data.
+  const hasAnyPrediction = subdivisions.some((sub) =>
+    Object.values(matchesBy[sub.id] || {}).some((list) => list.some((m) => m.savedPick))
+  );
+  const statsForTournament = stats.find((t) => t.id === tournament?.id)?.subdivisions || [];
+  const usuarioNuevo =
+    !loading && !profileLoading && !hasAnyPrediction && statsForTournament.length === 0 && groups.length === 0;
+
+  const statsBySubId = Object.fromEntries(statsForTournament.map((s) => [s.id, s.stats]));
+  const campaignStats = statsBySubId[currentSubId] || {
+    totalPredictions: 0,
+    totalPoints: 0,
+    correctPredictions: 0,
+    accuracy: 0,
+  };
+  const rankingRows = rankingBySub[currentSubId] || [];
+  const myRankIndex = rankingRows.findIndex((r) => r.user_id === currentUser?.id);
+  const positionLabel = myRankIndex >= 0 ? `#${myRankIndex + 1}` : "—";
+  const totalPlayersLabel = rankingRows.length ? String(rankingRows.length) : "—";
+
+  const campaignCards = [
+    { value: campaignStats.totalPoints, label: "puntos" },
+    { value: positionLabel, label: `de ${totalPlayersLabel} jugadores` },
+    {
+      value: campaignStats.correctPredictions,
+      label: `aciertos de ${campaignStats.totalPredictions}`,
+      tone: "success",
+    },
+    { value: `${campaignStats.accuracy}%`, label: "de efectividad" },
+  ];
+
+  const lastResultsFecha = [...fechas].reverse().find((f) =>
+    (matchesBy[currentSubId]?.[f.key] || []).some((m) => m.status === "finished")
+  );
+  const lastResults = lastResultsFecha
+    ? (matchesBy[currentSubId]?.[lastResultsFecha.key] || []).filter((m) => m.status === "finished")
+    : [];
+
+  const initials = currentUser?.name?.substring(0, 2).toUpperCase() || "US";
+  const firstName = currentUser?.name?.split(" ")[0] || "";
+
+  const starterBody =
+    totalAll > 0
+      ? `${totalAll} ${totalAll === 1 ? "partido te espera" : "partidos te esperan"}${
+          closingLabel ? ` · cierra ${closingLabel}` : ""
+        }.`
+      : "Arrancá apenas se cargue el próximo fixture.";
 
   return (
-    <AppLayout showBottomNav={true}>
-      <div className="flex flex-col min-h-screen">
-        {/* Header */}
-        <div className="pt-[22px] pb-[16px] px-4 flex flex-col gap-1 border-b border-prode-border bg-prode-bg">
-          <div className="font-display text-[26px] font-[900] uppercase tracking-[-0.01em] leading-none">
-            Inicio
+    <AppLayout width="wide">
+      <div className="flex flex-col">
+        <div className="pt-[18px] pb-4 px-4 flex items-center justify-between">
+          <div className="flex flex-col gap-[2px]">
+            <div className="text-[14px] font-[600] text-prode-text-muted">
+              {formatHeaderDate(new Date())}
+            </div>
+            <div className="font-display text-[24px] font-[900] uppercase tracking-[-0.01em] leading-none">
+              Hola, {firstName}
+            </div>
           </div>
-          <div className="text-[15px] font-[600] text-prode-text-muted">
-            URBA Top 12 · Fecha 12
+          <div className="w-[38px] h-[38px] rounded-[6px] bg-prode-elevated text-prode-text-muted flex items-center justify-center text-[14px] font-[700] shrink-0">
+            {initials}
           </div>
         </div>
 
         {loading ? (
-          <div className="flex justify-center pt-10"><LoadingSpinner /></div>
+          <div className="flex justify-center pt-10">
+            <LoadingSpinner />
+          </div>
+        ) : error ? (
+          <div className="px-4 text-center p-4 text-prode-error text-[14px] font-[600]">{error}</div>
+        ) : usuarioNuevo ? (
+          <div className="px-4 flex flex-col gap-3 pb-6 max-w-[520px]">
+            <div className="bg-prode-surface border border-prode-border rounded-[10px] overflow-hidden">
+              <div className="p-4 flex flex-col gap-2">
+                <div className="font-display text-[26px] font-[900] uppercase leading-[1.05]">
+                  Tu primera fecha te espera
+                </div>
+                <div className="text-[15px] leading-[1.5] text-prode-text-muted">{starterBody}</div>
+              </div>
+              <Link
+                to="/predictions"
+                className="flex items-center justify-center h-14 bg-prode-select-bg text-prode-select-fg text-[16px] font-[800]"
+              >
+                Hacer mis pronósticos
+              </Link>
+            </div>
+
+            <div className="bg-prode-surface border border-prode-border rounded-[10px] p-4 flex flex-col gap-2">
+              <div className="text-[15px] font-[700]">Todavía no jugás con nadie</div>
+              <div className="text-[14px] leading-[1.5] text-prode-text-muted">
+                Los grupos son la gracia del prode: armá uno con los del club o sumate con un código.
+              </div>
+              <div className="flex gap-2 pt-1">
+                <Link
+                  to="/groups"
+                  className="flex-1 h-11 rounded-[6px] border border-prode-border-control text-[14px] font-[700] flex items-center justify-center"
+                >
+                  Unirme
+                </Link>
+                <Link
+                  to="/groups"
+                  className="flex-1 h-11 rounded-[6px] bg-prode-select-bg text-prode-select-fg text-[14px] font-[800] flex items-center justify-center"
+                >
+                  Crear grupo
+                </Link>
+              </div>
+            </div>
+          </div>
         ) : (
-          <div className="px-4 py-[20px] flex flex-col gap-[20px] pb-[120px]">
-            {/* Stats */}
-            {userStats && (
-              <div className="flex gap-[12px]">
-                <div className="flex-1 bg-prode-surface border border-prode-border rounded-[10px] p-[16px] flex flex-col gap-[2px]">
-                  <div className="text-[12px] font-[800] tracking-[0.08em] uppercase text-prode-text-muted">
-                    Posición
+          <div className={`px-4 pb-6 flex flex-col gap-4 ${!darkMode ? "md:grid md:grid-cols-2 md:gap-4" : ""}`}>
+            <div className="flex flex-col gap-4">
+              <div className="bg-prode-surface border border-prode-border rounded-[10px] overflow-hidden">
+                <div className="p-4 flex flex-col gap-3 border-b border-prode-border">
+                  <div className="flex items-center justify-between">
+                    <div className="text-[12px] font-[700] tracking-[0.14em] uppercase text-prode-text-muted">
+                      {fechaLabel}
+                    </div>
+                    <div className="text-[12px] font-[800] text-prode-success tabular-nums">
+                      {totalDone}/{totalAll}
+                    </div>
                   </div>
-                  <div className="font-display text-[26px] font-[900] tabular-nums leading-none mt-1">
-                    #{userStats.rankingPosition || "-"}
+                  <div className="flex items-baseline gap-2">
+                    <div className="font-display text-[38px] font-[900] leading-none">
+                      {totalPending} {totalPending === 1 ? "partido" : "partidos"}
+                    </div>
+                    <div className="text-[15px] font-[600] text-prode-text-muted">sin pronosticar</div>
                   </div>
+                  <ProgressSegments total={totalAll} filled={totalDone} />
                 </div>
-                <div className="flex-1 bg-prode-surface border border-prode-border rounded-[10px] p-[16px] flex flex-col gap-[2px]">
-                  <div className="text-[12px] font-[800] tracking-[0.08em] uppercase text-prode-text-muted">
-                    Puntos
-                  </div>
-                  <div className="font-display text-[26px] font-[900] tabular-nums leading-none mt-1">
-                    {userStats.totalPoints || 0}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Upcoming Matches */}
-            <div className="flex flex-col gap-[14px]">
-              <div className="flex items-center justify-between">
-                <div className="font-display text-[20px] font-[900] uppercase tracking-[0.01em]">
-                  Próximos partidos
-                </div>
-                <button className="text-[14px] font-[700] text-prode-text-muted hover:text-prode-text transition-colors">
-                  Ver fixture →
-                </button>
+                <Link
+                  to="/predictions"
+                  className="flex items-center justify-center h-14 bg-prode-select-bg text-prode-select-fg text-[16px] font-[800]"
+                >
+                  Completar pronósticos
+                </Link>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-[16px]">
-                {upcomingMatches.length === 0 ? (
-                  <div className="text-[14px] font-[600] text-prode-text-muted text-center p-4 col-span-full">
-                    No hay próximos partidos.
+              <div className="flex flex-col gap-[10px]">
+                <div className="flex items-center justify-between">
+                  <div className="font-display text-[17px] font-[800] uppercase tracking-[0.02em]">
+                    Tu campaña
+                  </div>
+                  <div className="flex gap-[2px]">
+                    {subdivisions.map((sub) => (
+                      <button
+                        key={sub.id}
+                        type="button"
+                        onClick={() => setCampaignSubId(sub.id)}
+                        className={`px-[11px] py-[7px] rounded-[5px] text-[13px] cursor-pointer ${
+                          sub.id === currentSubId
+                            ? "font-[800] bg-prode-select-bg text-prode-select-fg"
+                            : "font-[600] text-prode-text-muted bg-prode-elevated"
+                        }`}
+                      >
+                        {sub.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {campaignCards.map((card) => (
+                    <StatCard key={card.label} value={card.value} label={card.label} tone={card.tone} />
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-[10px]">
+              <div className="font-display text-[17px] font-[800] uppercase tracking-[0.02em]">
+                Última fecha
+              </div>
+              <div className="bg-prode-surface border border-prode-border rounded-[10px] overflow-hidden">
+                {lastResults.length === 0 ? (
+                  <div className="p-6 text-center text-[14px] font-[600] text-prode-text-muted">
+                    Todavía no hay resultados.
                   </div>
                 ) : (
-                  upcomingMatches.map((match) => (
-                    <div
-                      key={match.id}
-                      className="bg-prode-surface border border-prode-border rounded-[12px] overflow-hidden flex flex-col"
-                    >
-                      <div className="px-4 py-[14px] flex items-center justify-between border-b border-prode-border-divider">
-                        <div className="flex items-center gap-[10px]">
-                          <div className="font-display text-[15px] font-[900] tabular-nums mt-[1px]">
-                            {new Date(match.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </div>
-                          <div className="w-[4px] h-[4px] rounded-full bg-prode-border-control"></div>
-                          <div className="text-[14px] font-[700] text-prode-text-muted truncate">
-                            {match.subdivision?.name || "Primera"}
-                          </div>
-                        </div>
-                        {match.status === "in_progress" ? (
-                          <StatusBadge variant="live" />
-                        ) : match.status === "finished" ? (
-                          <StatusBadge variant="saved" customLabel="Finalizado" />
-                        ) : (
-                          <StatusBadge variant="unsaved" customLabel="Programado" />
-                        )}
-                      </div>
+                  lastResults.map((m) => {
+                    const { correct, points } = outcomeFor(m);
+                    const played = sideLabel(m, m.savedPick);
+                    const dotState = !played ? "none" : correct ? "hit" : "miss";
+                    const mark = dotState === "hit" ? "✓" : dotState === "miss" ? "✕" : "–";
+                    const detail = !played
+                      ? "No pronosticaste"
+                      : correct
+                      ? `Jugaste ${played} · +${points} pts`
+                      : `Jugaste ${played}`;
+                    const scoreLabel =
+                      m.homeScore != null && m.awayScore != null ? `${m.homeScore}–${m.awayScore}` : "vs";
 
-                      <div className="p-[8px] flex flex-col sm:flex-row gap-[2px]">
-                        <TeamPlate
-                          team={{ shortName: (match.homeTeam?.name || "LOC").substring(0,3).toUpperCase(), name: match.homeTeam?.name || "Local" }}
-                          isSelected={match.userPrediction?.homeScore > match.userPrediction?.awayScore}
-                          isLocked={true}
-                        />
-                        <DrawBar isSelected={match.userPrediction?.homeScore !== undefined && match.userPrediction?.homeScore === match.userPrediction?.awayScore} isLocked={true} />
-                        <TeamPlate
-                          team={{ shortName: (match.awayTeam?.name || "VIS").substring(0,3).toUpperCase(), name: match.awayTeam?.name || "Visitante" }}
-                          isSelected={match.userPrediction?.awayScore > match.userPrediction?.homeScore}
-                          isLocked={true}
-                        />
+                    return (
+                      <div
+                        key={m.id}
+                        className="flex items-center gap-3 px-4 py-[13px] border-b border-prode-border-divider last:border-b-0"
+                      >
+                        <div
+                          className={`w-[26px] h-[26px] rounded-[5px] flex items-center justify-center text-[13px] font-[900] shrink-0 ${
+                            dotState === "hit"
+                              ? "bg-prode-success-bg text-prode-success"
+                              : dotState === "miss"
+                              ? "bg-prode-error-bg text-prode-error"
+                              : "bg-prode-elevated text-prode-text-disabled"
+                          }`}
+                        >
+                          {mark}
+                        </div>
+                        <div className="flex-1 flex flex-col gap-[1px] min-w-0">
+                          <div className="text-[15px] font-[700] truncate">
+                            {m.home.name} {scoreLabel} {m.away.name}
+                          </div>
+                          <div className="text-[14px] text-prode-text-muted truncate">{detail}</div>
+                        </div>
+                        <div className="font-display text-[16px] font-[800] tabular-nums text-prode-text-muted shrink-0">
+                          {correct ? `+${points}` : "0"}
+                        </div>
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
+                <Link
+                  to="/ranking"
+                  className="flex items-center justify-center h-12 text-[14px] font-[700] text-prode-text-muted"
+                >
+                  Ver ranking completo →
+                </Link>
               </div>
             </div>
           </div>

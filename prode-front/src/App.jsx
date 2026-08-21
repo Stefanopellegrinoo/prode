@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { Suspense, lazy } from 'react';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
@@ -40,17 +40,22 @@ function App() {
                 <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
                 {/* <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} /> */}
 
-                <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                {/* Shared TournamentProvider (ADR-7): one fixture fetch for every screen that
+                    needs torneo/subdivisiones/fechas. Dashboard is this layout's second real
+                    consumer after Predictions — see apply-progress Unit 4 decision #1 and
+                    Unit 5 for why this moved from a per-route wrap to a layout route. */}
                 <Route
-                  path="/predictions"
                   element={
                     <ProtectedRoute>
                       <TournamentProvider>
-                        <Predictions />
+                        <Outlet />
                       </TournamentProvider>
                     </ProtectedRoute>
                   }
-                />
+                >
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/predictions" element={<Predictions />} />
+                </Route>
                 <Route path="/groups" element={<ProtectedRoute><Groups /></ProtectedRoute>} />
                 <Route
                   path="/groups/:id"
