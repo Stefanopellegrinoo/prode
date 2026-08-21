@@ -42,7 +42,6 @@ const Predictions = () => {
   const [picks, setPicks] = useState({});
   // matchId -> pick, populated once a POST succeeds (avoids refetching the whole context).
   const [savedOverrides, setSavedOverrides] = useState({});
-  const [failedIds, setFailedIds] = useState(new Set());
   const [saving, setSaving] = useState(false);
   const [savedFlash, setSavedFlash] = useState(false);
 
@@ -84,13 +83,6 @@ const Predictions = () => {
 
   const setPick = (matchId, value) => {
     setPicks((prev) => ({ ...prev, [matchId]: value }));
-    setFailedIds((prev) => {
-      const key = String(matchId);
-      if (!prev.has(key)) return prev;
-      const next = new Set(prev);
-      next.delete(key);
-      return next;
-    });
     setSavedFlash(false);
   };
 
@@ -126,7 +118,6 @@ const Predictions = () => {
       succeeded.forEach((id) => delete next[id]);
       return next;
     });
-    setFailedIds(new Set(failed));
     setSaving(false);
 
     if (succeeded.length) {
@@ -138,7 +129,8 @@ const Predictions = () => {
         succeeded.length
           ? "Algunos pronósticos no se pudieron guardar. Probá de nuevo."
           : "Hubo un error al guardar.",
-        "error"
+        "error",
+        { onRetry: handleSave }
       );
     }
   };
@@ -151,7 +143,9 @@ const Predictions = () => {
     let resultNote;
 
     if (match.status === "live" || match.status === "finished") {
-      const played = sideLabel(match, sel);
+      // Locked matches reflect backend-confirmed picks only, never unsent local overrides.
+      const confirmed = savedPickFor(match);
+      const played = sideLabel(match, confirmed);
       resultNote = played
         ? `Jugaste ${played}${scored ? ` · ${scored}` : ""}`
         : `No pronosticaste${scored ? ` · ${scored}` : ""}`;
@@ -159,19 +153,17 @@ const Predictions = () => {
       if (match.status === "live") {
         badgeVariant = "live";
       } else {
-        const correct = Boolean(sel) && sel === match.result;
+        const correct = Boolean(confirmed) && confirmed === match.result;
         if (correct) {
           badgeVariant = "hit";
-          customBadgeLabel = `✓ +${sel === "draw" ? POINTS.DRAW : POINTS.WIN} pts`;
+          customBadgeLabel = `✓ +${confirmed === "draw" ? POINTS.DRAW : POINTS.WIN} pts`;
         } else {
           badgeVariant = "miss";
         }
       }
     } else if (sel) {
       const hasLocalOverride = picks[match.id] !== undefined && picks[match.id] !== null;
-      if (failedIds.has(String(match.id))) badgeVariant = "pending";
-      else if (hasLocalOverride) badgeVariant = "unsaved";
-      else badgeVariant = "saved";
+      badgeVariant = hasLocalOverride ? "unsaved" : "saved";
     }
 
     return {
@@ -247,7 +239,11 @@ const Predictions = () => {
                     <MatchCard
                       key={match.id}
                       match={buildCardMatch(match)}
-                      prediction={effectivePick(match)}
+                      prediction={
+                        match.status === "live" || match.status === "finished"
+                          ? savedPickFor(match)
+                          : effectivePick(match)
+                      }
                       status={match.status}
                       onPredict={(value) => setPick(match.id, value)}
                     />
