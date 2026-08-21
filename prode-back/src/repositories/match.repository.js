@@ -9,8 +9,8 @@ export default class MatchRepository {
     console.log('findAll', opts)
     return Match.findAll({
       include: [
-        { model: Team, as: 'homeTeam', attributes: ['id','name','logo'] },
-        { model: Team, as: 'awayTeam', attributes: ['id','name','logo'] }
+        { model: Team, as: 'homeTeam', attributes: ['id','name','shortName','logo'] },
+        { model: Team, as: 'awayTeam', attributes: ['id','name','shortName','logo'] }
       ],
       order: [['round','ASC'], ['date','ASC']],
       ...opts
@@ -24,8 +24,8 @@ export default class MatchRepository {
     console.log('findById', id)
     return Match.findByPk(id, {
       include: [
-        { model: Team, as: 'homeTeam', attributes: ['id','name','logo'] },
-        { model: Team, as: 'awayTeam', attributes: ['id','name','logo'] }
+        { model: Team, as: 'homeTeam', attributes: ['id','name','shortName','logo'] },
+        { model: Team, as: 'awayTeam', attributes: ['id','name','shortName','logo'] }
       ]
     });
   }
@@ -38,8 +38,8 @@ export default class MatchRepository {
       where: { tournament_id : tournamentId },
       
       include: [
-        { model: Team, as: 'homeTeam', attributes: ['id', 'name', 'logo'] },
-        { model: Team, as: 'awayTeam', attributes: ['id', 'name', 'logo'] },
+        { model: Team, as: 'homeTeam', attributes: ['id', 'name', 'shortName', 'logo'] },
+        { model: Team, as: 'awayTeam', attributes: ['id', 'name', 'shortName', 'logo'] },
         { model: Subdivision, attributes: ['id','name'] }
       ],
       order: [['date', 'ASC']] // o [['round', 'ASC']] si querés orden por ronda
@@ -66,8 +66,8 @@ export default class MatchRepository {
     const matches = await Match.findAll({
       where: { tournament_id: tournamentId },
       include: [
-        { model: Team, as: 'homeTeam', attributes: ['id', 'name', 'logo'] },
-        { model: Team, as: 'awayTeam', attributes: ['id', 'name', 'logo'] },
+        { model: Team, as: 'homeTeam', attributes: ['id', 'name', 'shortName', 'logo'] },
+        { model: Team, as: 'awayTeam', attributes: ['id', 'name', 'shortName', 'logo'] },
         { model: Subdivision, attributes: ['id', 'name'] },
         {
           model: Prediction,
