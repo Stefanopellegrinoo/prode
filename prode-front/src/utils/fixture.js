@@ -32,10 +32,8 @@ export const matchStatus = (match) => {
 }
 
 /**
- * `Team.shortName` exists on the model but the enriched endpoint currently selects
- * only `['id','name','logo']` (verified at runtime — see apply-progress). Prefer it
- * when present so a future backend fix is picked up for free; otherwise derive a
- * 3-letter fallback from the name.
+ * The enriched endpoint selects `Team.shortName` since f5736c4. The fallback covers
+ * older match endpoints that may omit it and teams with the column left null.
  */
 const shortName = (team) => {
   if (!team) return ""

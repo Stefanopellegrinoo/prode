@@ -60,7 +60,7 @@ const REAL_PAYLOAD = {
         away_score: null,
         status: "UPCOMING",
         result: null,
-        homeTeam: { id: 11, name: "Club Champagnat", logo: null },
+        homeTeam: { id: 11, name: "Club Champagnat", shortName: "CHA", logo: null },
         awayTeam: { id: 12, name: "Club Los Tilos", logo: null },
         Subdivision: { id: 2, name: "Intermedia" },
         Predictions: [],
@@ -97,6 +97,11 @@ assert.match(withPick.time, /^\d{1,2}:\d{2}/)
 
 const withoutPick = primeraMatches.find((m) => m.id === 9)
 assert.equal(withoutPick.savedPick, null)
+
+// backend-provided shortName wins over the name-derived fallback
+const intermediaMatch = normalized.matchesBy[2]["2026-08-22"][0]
+assert.equal(intermediaMatch.home.shortName, "CHA")
+assert.equal(intermediaMatch.away.shortName, "CLU")
 
 // --- matchStatus mapping table (synthetic — seed data has no live/finished matches) ---
 assert.equal(matchStatus({ status: "UPCOMING" }), "scheduled")

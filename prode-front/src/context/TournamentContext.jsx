@@ -71,16 +71,19 @@ export const TournamentProvider = ({ children }) => {
 
   const fechaActual = useMemo(() => getFechaActual(fechas, matchesBy), [fechas, matchesBy])
 
-  const value = {
-    tournament,
-    subdivisions,
-    fechas,
-    fechaActual,
-    matchesBy,
-    loading,
-    error,
-    refetch: load,
-  }
+  const value = useMemo(
+    () => ({
+      tournament,
+      subdivisions,
+      fechas,
+      fechaActual,
+      matchesBy,
+      loading,
+      error,
+      refetch: load,
+    }),
+    [tournament, subdivisions, fechas, fechaActual, matchesBy, loading, error, load]
+  )
 
   return <TournamentContext.Provider value={value}>{children}</TournamentContext.Provider>
 }
