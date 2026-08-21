@@ -25,7 +25,7 @@ const AppLayout = ({ children, showBottomNav = true, width = "default" }) => {
 AppLayout.propTypes = {
   children: PropTypes.node.isRequired,
   showBottomNav: PropTypes.bool,
-  width: PropTypes.oneOf(["default", "wide"]),
+  width: PropTypes.oneOf(["default", "wide", "narrow"]),
 };
 
 export default AppLayout;
