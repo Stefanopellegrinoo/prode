@@ -29,6 +29,10 @@ const variants = {
     classes: "bg-prode-elevated text-prode-text",
     label: "Admin",
   },
+  scheduled: {
+    classes: "bg-prode-elevated text-prode-text-muted",
+    label: "Programado",
+  },
 };
 
 const StatusBadge = ({ variant, customLabel }) => {
@@ -54,6 +58,7 @@ StatusBadge.propTypes = {
     "hit",
     "miss",
     "admin",
+    "scheduled",
   ]),
   customLabel: PropTypes.string,
 };

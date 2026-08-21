@@ -167,10 +167,17 @@ const FixtureAdmin = () => {
   };
 
   const saveResult = async (match) => {
-    if (editScores.home === "" || editScores.away === "") return;
+    setError(null);
+    if (editScores.home === "" || editScores.away === "") {
+      setError("Cargá los dos resultados para guardar.");
+      return;
+    }
     const home = Number(editScores.home);
     const away = Number(editScores.away);
-    if (Number.isNaN(home) || Number.isNaN(away)) return;
+    if (!Number.isInteger(home) || !Number.isInteger(away) || home < 0 || away < 0) {
+      setError("Los resultados tienen que ser números enteros mayores o iguales a 0.");
+      return;
+    }
 
     const result = home === away ? "draw" : home > away ? "home" : "away";
     setSavingId(match.id);
@@ -182,12 +189,20 @@ const FixtureAdmin = () => {
         result,
         status: "FINISHED",
       });
-      await refetchMatches();
-      cancelEdit();
     } catch (err) {
       setError(err.message || "No se pudo guardar el resultado");
+      return;
     } finally {
       setSavingId(null);
+    }
+
+    // The write already succeeded: close the editor before refreshing, so a failed
+    // refetch can't be read as a failed save and invite a duplicate retry.
+    cancelEdit();
+    try {
+      await refetchMatches();
+    } catch {
+      setError("Guardado, pero no se pudo refrescar la vista.");
     }
   };
 
@@ -222,6 +237,7 @@ const FixtureAdmin = () => {
     }
 
     setCreating(true);
+    let created;
     try {
       // Verified in runtime against the real backend (see apply-progress): MatchService#create
       // ignores `subdivision_id` entirely and always loops over the TOURNAMENT'S FULL
@@ -230,27 +246,36 @@ const FixtureAdmin = () => {
       // day) in ANY subdivision throws and rolls back the whole batch, so calling this once
       // per checked chip either duplicates work or guarantees conflicts on every call after
       // the first. One call is correct; the chip selection can't be enforced server-side.
-      const created = await createMatch(tournament.id, {
+      created = await createMatch(tournament.id, {
         tournament_id: tournament.id,
         subdivision_id: newMatch.subdivisionIds[0],
         home_team_id: Number(newMatch.homeTeamId),
         away_team_id: Number(newMatch.awayTeamId),
         date: new Date(newMatch.datetime).toISOString(),
       });
-      await refetchMatches();
-      setNewOpen(false);
-      const createdIds = new Set((created || []).map((m) => m.subdivision_id));
-      const requestedIds = new Set(newMatch.subdivisionIds);
-      const wasPartialSelection = [...createdIds].some((id) => !requestedIds.has(id));
-      if (wasPartialSelection) {
-        setError(
-          "El partido se creó en las 5 subdivisiones del torneo: el backend todavía no permite crearlo solo en las marcadas."
-        );
-      }
     } catch (err) {
       setModalError(err.message || "No se pudo crear el partido.");
+      return;
     } finally {
       setCreating(false);
+    }
+
+    // The match already exists: close the modal before refreshing, so a failed refetch
+    // can't be read as a failed create and trigger a duplicate submission.
+    setNewOpen(false);
+    try {
+      await refetchMatches();
+    } catch {
+      setError("Creado, pero no se pudo refrescar la vista.");
+    }
+
+    const createdIds = new Set((created || []).map((m) => m.subdivision_id));
+    const requestedIds = new Set(newMatch.subdivisionIds);
+    const backendCreatedExtra = [...createdIds].some((id) => !requestedIds.has(id));
+    if (backendCreatedExtra) {
+      setError(
+        `El partido se creó en las ${createdIds.size} subdivisiones del torneo: el backend todavía no permite crearlo solo en las marcadas.`
+      );
     }
   };
 
@@ -350,12 +375,14 @@ const FixtureAdmin = () => {
                           <div className="flex gap-1">
                             <input
                               type="number"
+                              min="0"
                               value={editScores.home}
                               onChange={(e) => setEditScores((prev) => ({ ...prev, home: e.target.value }))}
                               className="w-[44px] h-[36px] bg-prode-bg border border-prode-border-control rounded-[4px] text-center font-display text-[16px] font-[800] tabular-nums outline-none focus:border-prode-text"
                             />
                             <input
                               type="number"
+                              min="0"
                               value={editScores.away}
                               onChange={(e) => setEditScores((prev) => ({ ...prev, away: e.target.value }))}
                               className="w-[44px] h-[36px] bg-prode-bg border border-prode-border-control rounded-[4px] text-center font-display text-[16px] font-[800] tabular-nums outline-none focus:border-prode-text"
@@ -371,7 +398,7 @@ const FixtureAdmin = () => {
                       </div>
 
                       <div>
-                        {status === "scheduled" && <StatusBadge variant="unsaved" customLabel="Programado" />}
+                        {status === "scheduled" && <StatusBadge variant="scheduled" />}
                         {status === "live" && <StatusBadge variant="live" />}
                         {status === "finished" && <StatusBadge variant="hit" customLabel="Finalizado" />}
                       </div>
@@ -573,7 +600,7 @@ const FixtureAdmin = () => {
           <div className="absolute inset-0 bg-[#050806] bg-opacity-80" onClick={() => setNewOpen(false)}></div>
           <div className="relative bg-prode-surface border border-prode-border rounded-[10px] w-full max-w-[480px] flex flex-col animate-fade-in shadow-2xl">
             <div className="p-5 border-b border-prode-border">
-              <h2 className="font-display text-[20px] font-[900] uppercase">Nuevo Partido</h2>
+              <h2 className="font-display text-[20px] font-[900] uppercase">Nuevo partido</h2>
             </div>
             <div className="p-5 flex flex-col gap-4">
               {modalError && (
@@ -628,6 +655,9 @@ const FixtureAdmin = () => {
                   className="h-[44px] bg-prode-bg border border-prode-border-control rounded-[6px] px-3 text-[14px] font-[600] outline-none focus:border-prode-text"
                 />
               </div>
+              {/* The design pairs "Fecha y hora" with an "Estadio" input here; omitted because the
+                  backend Match model has no stadium column (prode-back/src/models/match.model.js),
+                  so the value would have nowhere to persist. */}
 
               <div className="flex flex-col gap-2 mt-2">
                 <label className="text-[12px] font-[800] uppercase tracking-[0.1em] text-prode-text-muted">
