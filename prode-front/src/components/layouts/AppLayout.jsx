@@ -1,11 +1,7 @@
 import PropTypes from "prop-types";
 import BottomNav from "../navigation/BottomNav";
 import { useAuth } from "../../context/AuthContext";
-
-const SHELL_WIDTH = {
-  default: "max-w-[430px] md:max-w-[720px]",
-  wide: "max-w-[430px] md:max-w-[880px]",
-};
+import { SHELL_WIDTH } from "./shellWidth";
 
 const AppLayout = ({ children, showBottomNav = true, width = "default" }) => {
   const { isAuthenticated } = useAuth();

@@ -61,7 +61,7 @@ const MatchCard = ({ match, prediction, status, onPredict }) => {
 
 MatchCard.propTypes = {
   match: PropTypes.shape({
-    id: PropTypes.string.isRequired,
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
     time: PropTypes.string.isRequired,
     home: PropTypes.shape({
       shortName: PropTypes.string.isRequired,

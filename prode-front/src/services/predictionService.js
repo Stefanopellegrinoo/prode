@@ -15,17 +15,14 @@ export const getPredictionsByUser = async () => {
   }
 };
 
-// Guarda (o actualiza) una predicción individual para un partido.
-// La idea es que envíes un objeto que incluya: userId, matchId, predictedHomeScore y predictedAwayScore.
-export const savePrediction = async (predictionData, userId) => {
+// Guarda (o actualiza) el pronóstico de un partido.
+// Contrato real del backend (verificado en runtime, ver sdd/redesign-fidelity/apply-progress
+// R-D2): predicted_winner es la única columna NOT NULL relevante; predictedHomeScore/
+// predictedAwayScore no existen en el modelo. userId no va en el body — el backend lo toma
+// de req.user.id (prediction.controller.js).
+export const savePrediction = async ({ matchId, predicted_winner }) => {
   try {
-    console.log("savePrediction", predictionData);
-    const data = {
-      ...predictionData,
-      userId: userId, // Asegúrate de que el userId esté en el objeto
-    };
-    // Realizamos un POST; en el backend se puede usar un upsert (crear o actualizar)
-    const response = await api.post("/predictions", data);
+    const response = await api.post("/predictions", { matchId, predicted_winner });
     return response.data;
   } catch (error) {
     console.error("Error saving prediction:", error);
