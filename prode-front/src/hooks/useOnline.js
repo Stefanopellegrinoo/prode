@@ -3,7 +3,7 @@ import { useEffect, useState } from "react"
 // navigator.onLine + `online`/`offline` events (ADR-10). No polling, no backend
 // ping — just the browser's own connectivity signal.
 export const useOnline = () => {
-  const [online, setOnline] = useState(() => navigator.onLine)
+  const [online, setOnline] = useState(() => (typeof navigator !== "undefined" ? navigator.onLine : true))
 
   useEffect(() => {
     const setOn = () => setOnline(true)

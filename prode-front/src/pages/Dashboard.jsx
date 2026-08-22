@@ -14,7 +14,7 @@ import { useNow } from "../hooks/useNow";
 import { getUserStats } from "../services/userService";
 import { getMyGroups } from "../services/groupService";
 import { getTournamentRanking } from "../services/rankingService";
-import { formatCountdown } from "../utils/fixture";
+import { getFechaClosingStats, formatCountdown } from "../utils/fixture";
 import { POINTS, UMBRAL_CIERRE_MS } from "../config/constants";
 import { getInitials } from "../lib/utils";
 
@@ -130,9 +130,13 @@ const Dashboard = () => {
   const closingLabel = earliestMatch ? kickoffLabel(earliestMatch) : null;
 
   // F5.3 flags — derived from data already in context/state, no mocks, no new endpoints.
+  // The countdown comes from getFechaClosingStats (shared with Predictions): it skips
+  // finished matches, so the banner keeps working once the fecha's first match kicks off.
   const sinConexion = !online;
-  const msToClose = earliestMatch ? earliestMatch.kickoff.getTime() - now : null;
-  const cierreCerca = totalPending > 0 && msToClose != null && msToClose > 0 && msToClose < UMBRAL_CIERRE_MS;
+  const { kickoff: closingKickoff, missingCount: closingMissing } = getFechaClosingStats(matchesBy, fechaKey);
+  const msToClose = closingKickoff ? closingKickoff.getTime() - now : null;
+  const cierreCerca =
+    closingMissing > 0 && msToClose != null && msToClose > 0 && msToClose < UMBRAL_CIERRE_MS;
 
   const fechaLabel = fechaActual
     ? `Fecha ${fechaActual.number}${closingLabel ? ` · cierra ${closingLabel}` : ""}`
@@ -234,7 +238,7 @@ const Dashboard = () => {
                   <span>
                     para el cierre. Te faltan{" "}
                     <span className="text-prode-text font-[800]">
-                      {totalPending} {totalPending === 1 ? "partido" : "partidos"}
+                      {closingMissing} {closingMissing === 1 ? "partido" : "partidos"}
                     </span>
                     .
                   </span>

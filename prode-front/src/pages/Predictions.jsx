@@ -237,11 +237,15 @@ const Predictions = () => {
             <div className="text-center p-4 text-prode-error text-[14px] font-[600]">{error}</div>
           ) : (
             <>
+              {sinConexion && (
+                <Banner tone="offline">
+                  Sin conexión. Tus pronósticos quedan guardados en el teléfono y se envían solos al volver
+                  la señal.
+                </Banner>
+              )}
+              {/* No action here: the user is already on the predictions screen. */}
               {cierreCerca && (
-                <Banner
-                  tone="urgent"
-                  action={{ label: "Completar", onClick: () => navigate("/predictions") }}
-                >
+                <Banner tone="urgent">
                   <span className="inline-flex items-baseline gap-[10px]">
                     <span className="font-display text-[20px] font-[900] tabular-nums text-prode-text">
                       {formatCountdown(msToClose)}
@@ -254,12 +258,6 @@ const Predictions = () => {
                       .
                     </span>
                   </span>
-                </Banner>
-              )}
-              {sinConexion && (
-                <Banner tone="offline">
-                  Sin conexión. Tus pronósticos quedan guardados en el teléfono y se envían solos al volver
-                  la señal.
                 </Banner>
               )}
 
@@ -286,7 +284,7 @@ const Predictions = () => {
                     onClick={() => navigate("/ranking")}
                     className="h-11 px-4 mt-1 rounded-[6px] border border-prode-border-control text-[14px] font-[700]"
                   >
-                    Ver resultados de la fecha 12
+                    Ver resultados
                   </button>
                 </div>
               ) : activeMatches.length === 0 ? (
