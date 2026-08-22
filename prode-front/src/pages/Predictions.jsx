@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AppLayout from "../components/layouts/AppLayout";
 import MatchCard from "../components/fixture/MatchCard";
@@ -14,6 +14,7 @@ import { useOnline } from "../hooks/useOnline";
 import { useNow } from "../hooks/useNow";
 import { savePrediction } from "../services/predictionService";
 import { getFechaClosingStats, formatCountdown } from "../utils/fixture";
+import { pendingPicksStore, reconcilePendingOnPick, isTerminalPredictionError } from "../utils/pendingPicks";
 import { POINTS, UMBRAL_CIERRE_MS } from "../config/constants";
 import { getInitials } from "../lib/utils";
 
@@ -51,9 +52,13 @@ const Predictions = () => {
   const [picks, setPicks] = useState({});
   // matchId -> pick, populated once a POST succeeds (avoids refetching the whole context).
   const [savedOverrides, setSavedOverrides] = useState({});
+  // matchId -> pick, saved to localStorage while offline, not yet POSTed (ADR-10).
+  const [offlinePending, setOfflinePending] = useState({});
   const [saving, setSaving] = useState(false);
+  // false | 'saved' | 'offline' — drives both the flash's visibility and its copy.
   const [savedFlash, setSavedFlash] = useState(false);
 
+  const userId = currentUser?.id ?? null;
   const currentSubdivisionId = activeSubdivisionId ?? subdivisions[0]?.id ?? null;
   const fechaKey = fechaActual?.key ?? null;
 
@@ -70,8 +75,103 @@ const Predictions = () => {
 
   const effectivePick = (match) => {
     const local = picks[match.id];
-    return local !== undefined ? local : savedPickFor(match);
+    if (local !== undefined) return local;
+    const offline = offlinePending[match.id];
+    if (offline !== undefined) return offline;
+    return savedPickFor(match);
   };
+
+  // Latest `picks` without adding it as an effect dependency below — the flush
+  // effect should only run on an actual online/user transition, never on every
+  // tap, but still needs the freshest local overrides to avoid clobbering one
+  // mid-edit (belt-and-suspenders on top of setPick's own reconciliation).
+  const picksRef = useRef(picks);
+  useEffect(() => {
+    picksRef.current = picks;
+  }, [picks]);
+
+  // Guards against overlapping flush attempts when `online` flaps rapidly
+  // (offline/online/offline in quick succession) — one flush in flight at a time.
+  const flushingRef = useRef(false);
+
+  // Rehydrate pending picks on mount (or user switch) and flush them whenever
+  // there's a connection — both the "just reconnected" case and the "was
+  // already online, picks are stale in localStorage from a previous offline
+  // session" case. Reads localStorage directly rather than trusting React
+  // state as the source of truth, since `online` flips are the only trigger.
+  useEffect(() => {
+    if (!userId) return;
+    const store = pendingPicksStore(userId);
+    const pending = store.readPending();
+    const ids = Object.keys(pending);
+
+    if (!ids.length) {
+      setOfflinePending({});
+      return;
+    }
+    setOfflinePending(pending);
+    if (!online || flushingRef.current) return;
+
+    // Skip anything with a fresher local override in progress — setPick
+    // already keeps `pending` in sync the instant a pick changes, this is
+    // just a second line of defense against a race with this effect.
+    // ponytail: this only guards the pre-flush snapshot — an edit that lands
+    // strictly *during* the in-flight POST below can still get clobbered by
+    // this flush's success handler. Narrow window (one round trip), not
+    // handled; revisit if it ever shows up in practice.
+    const toFlush = ids.filter((id) => picksRef.current[id] === undefined);
+    if (!toFlush.length) return;
+
+    flushingRef.current = true;
+    let cancelled = false;
+
+    (async () => {
+      const settled = await Promise.allSettled(
+        toFlush.map((id) => savePrediction({ matchId: Number(id), predicted_winner: pending[id] }))
+      );
+      if (cancelled) return;
+
+      const succeeded = [];
+      const terminallyFailed = [];
+      settled.forEach((result, i) => {
+        if (result.status === "fulfilled") {
+          succeeded.push(toFlush[i]);
+        } else if (isTerminalPredictionError(result.reason?.message)) {
+          terminallyFailed.push(toFlush[i]);
+        }
+        // transient failures (network, unexpected 5xx): left pending, retried
+        // silently on the next online event or manual save — no toast noise.
+      });
+
+      const resolved = [...succeeded, ...terminallyFailed];
+      if (resolved.length) {
+        store.clearPending(resolved);
+        setOfflinePending((prev) => {
+          const next = { ...prev };
+          resolved.forEach((id) => delete next[id]);
+          return next;
+        });
+      }
+      if (succeeded.length) {
+        setSavedOverrides((prev) => {
+          const next = { ...prev };
+          succeeded.forEach((id) => {
+            next[id] = pending[id];
+          });
+          return next;
+        });
+      }
+      if (terminallyFailed.length) {
+        showToast("Algunos pronósticos no llegaron a enviarse antes del inicio del partido.", "info");
+      }
+    })().finally(() => {
+      flushingRef.current = false;
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, online, showToast]);
 
   const matchesFor = (subdivisionId) => (fechaKey ? matchesBy[subdivisionId]?.[fechaKey] ?? [] : []);
 
@@ -101,6 +201,20 @@ const Predictions = () => {
   const setPick = (matchId, value) => {
     setPicks((prev) => ({ ...prev, [matchId]: value }));
     setSavedFlash(false);
+
+    // If this match already had an offline-committed pick, the user just
+    // changed their mind — fix it at the source, not at flush time. Deselect
+    // drops the stale entry; a different pick overwrites it. Single point of
+    // mutation for both React state and its localStorage mirror.
+    const nextOfflinePending = reconcilePendingOnPick(offlinePending, matchId, value);
+    if (nextOfflinePending !== offlinePending) {
+      setOfflinePending(nextOfflinePending);
+      if (userId) {
+        const store = pendingPicksStore(userId);
+        if (value === null) store.clearPending([matchId]);
+        else store.writePending(nextOfflinePending);
+      }
+    }
   };
 
   // Only actual selections count as pending — a local `null` override (re-tapping a saved
@@ -111,6 +225,32 @@ const Predictions = () => {
 
   const handleSave = async () => {
     if (!pendingCount || saving) return;
+
+    // Offline: nothing to POST. Persist locally and let the reconnect effect
+    // above retry — no queue, no backoff, no conflict resolution (ADR-10).
+    // Never blocks: the user keeps picking normally on top of this.
+    if (!online) {
+      if (!userId) return; // protected route, shouldn't happen — degrade to no-op over a crash
+
+      const toStore = {};
+      pendingIds.forEach((id) => {
+        toStore[id] = picks[id];
+      });
+      const store = pendingPicksStore(userId);
+      store.writePending({ ...store.readPending(), ...toStore });
+
+      setOfflinePending((prev) => ({ ...prev, ...toStore }));
+      setPicks((prev) => {
+        const next = { ...prev };
+        pendingIds.forEach((id) => delete next[id]);
+        return next;
+      });
+
+      setSavedFlash("offline");
+      setTimeout(() => setSavedFlash(false), 2200);
+      return;
+    }
+
     setSaving(true);
 
     const settled = await Promise.allSettled(
@@ -135,10 +275,22 @@ const Predictions = () => {
       succeeded.forEach((id) => delete next[id]);
       return next;
     });
+
+    // A fresh online save always wins — drop any stale offline commitment for
+    // these ids too, or a later reconnect flush could overwrite this with an
+    // old value (the bug this whole fix batch exists for).
+    if (succeeded.length && userId) {
+      pendingPicksStore(userId).clearPending(succeeded);
+      setOfflinePending((prev) => {
+        const next = { ...prev };
+        succeeded.forEach((id) => delete next[id]);
+        return next;
+      });
+    }
     setSaving(false);
 
     if (succeeded.length) {
-      setSavedFlash(true);
+      setSavedFlash("saved");
       setTimeout(() => setSavedFlash(false), 2200);
     }
     if (failed.length) {
@@ -180,7 +332,11 @@ const Predictions = () => {
       }
     } else if (sel) {
       const hasLocalOverride = picks[match.id] !== undefined && picks[match.id] !== null;
-      badgeVariant = hasLocalOverride ? "unsaved" : "saved";
+      if (!hasLocalOverride && offlinePending[match.id] !== undefined) {
+        badgeVariant = "pending"; // saved to localStorage, waiting on a connection (ADR-10)
+      } else {
+        badgeVariant = hasLocalOverride ? "unsaved" : "saved";
+      }
     }
 
     return {
@@ -313,7 +469,13 @@ const Predictions = () => {
         </div>
       </div>
 
-      <SaveBar count={pendingCount} saving={saving} flash={savedFlash} onSave={handleSave} />
+      <SaveBar
+        count={pendingCount}
+        saving={saving}
+        flash={Boolean(savedFlash)}
+        flashLabel={savedFlash === "offline" ? "✓ Guardados en el teléfono" : "✓ Pronósticos guardados"}
+        onSave={handleSave}
+      />
     </AppLayout>
   );
 };
