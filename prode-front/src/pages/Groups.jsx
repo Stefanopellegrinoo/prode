@@ -172,10 +172,10 @@ const Groups = () => {
                           <div
                             className={`w-[22px] h-[22px] rounded-[4px] flex items-center justify-center font-display text-[13px] font-[900] tabular-nums text-prode-bg ${
                               idx === 0
-                                ? "bg-[#D8B54A]"
+                                ? "bg-prode-gold"
                                 : idx === 1
-                                ? "bg-[#98A399]"
-                                : "bg-[#8A6D4A]"
+                                ? "bg-prode-silver"
+                                : "bg-prode-bronze"
                             }`}
                           >
                             {idx + 1}
