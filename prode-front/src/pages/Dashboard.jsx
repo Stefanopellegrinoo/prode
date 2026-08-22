@@ -12,6 +12,7 @@ import { getUserStats } from "../services/userService";
 import { getMyGroups } from "../services/groupService";
 import { getTournamentRanking } from "../services/rankingService";
 import { POINTS } from "../config/constants";
+import { getInitials } from "../lib/utils";
 
 const WEEKDAYS_FULL = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 const MONTHS_FULL = [
@@ -174,7 +175,7 @@ const Dashboard = () => {
     ? (matchesBy[currentSubId]?.[lastResultsFecha.key] || []).filter((m) => m.status === "finished")
     : [];
 
-  const initials = currentUser?.name?.substring(0, 2).toUpperCase() || "US";
+  const initials = getInitials(currentUser?.name, "US");
   const firstName = currentUser?.name?.split(" ")[0] || "";
 
   const starterBody =

@@ -5,4 +5,8 @@
 export const SHELL_WIDTH = {
   default: "max-w-[430px] md:max-w-[720px]",
   wide: "max-w-[430px] md:max-w-[880px]",
+  // Login and Grupo Detalle have no desktop override in any .dc.html — spec
+  // requires they stay 430px centered at every viewport (GroupDetail is the
+  // only one of the two that goes through AppLayout; Login uses AuthLayout).
+  narrow: "max-w-[430px]",
 };

@@ -41,9 +41,12 @@ function App() {
                 {/* <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} /> */}
 
                 {/* Shared TournamentProvider (ADR-7): one fixture fetch for every screen that
-                    needs torneo/subdivisiones/fechas. Dashboard is this layout's second real
-                    consumer after Predictions — see apply-progress Unit 4 decision #1 and
-                    Unit 5 for why this moved from a per-route wrap to a layout route. */}
+                    needs torneo/subdivisiones/fechas. Ranking and Profile joined this unit
+                    (Unit 6) — both need `tournament`/`subdivisions` to resolve tabs and the
+                    default subdivision, same as Dashboard/Predictions. GroupDetail stays OUT:
+                    it derives its own tournament/subdivision list from the group-scoped
+                    `/groups/:id/details` payload (which can differ from the globally-current
+                    tournament), so a second fixture fetch here would be wasted and wrong. */}
                 <Route
                   element={
                     <ProtectedRoute>
@@ -55,6 +58,9 @@ function App() {
                 >
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/predictions" element={<Predictions />} />
+                  <Route path="/profile" element={<Profile />} />
+                  <Route path="/ranking" element={<Ranking />} />
+                  <Route path="/ranking/:id" element={<Ranking />} />
                 </Route>
                 <Route path="/groups" element={<ProtectedRoute><Groups /></ProtectedRoute>} />
                 <Route
@@ -65,9 +71,6 @@ function App() {
                     </ProtectedRoute>
                   }
                 />
-                <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-                <Route path="/ranking" element={<ProtectedRoute><Ranking /></ProtectedRoute>} />
-                <Route path="/ranking/:id" element={<ProtectedRoute><Ranking /></ProtectedRoute>} />
                 <Route path="/match/:id" element={<ProtectedRoute><TournamentFixtures /></ProtectedRoute>} />
 
                 <Route path="/admin/fixture" element={<AdminRoute><FixtureAdmin /></AdminRoute>} />

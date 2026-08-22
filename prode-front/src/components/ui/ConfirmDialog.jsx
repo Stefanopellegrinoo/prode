@@ -1,6 +1,15 @@
 import PropTypes from "prop-types";
 
-const ConfirmDialog = ({ title, message, confirmLabel, cancelLabel, onConfirm, onCancel }) => {
+const ConfirmDialog = ({
+  title,
+  message,
+  confirmLabel,
+  cancelLabel,
+  onConfirm,
+  onCancel,
+  // Optional: lets the caller block a second confirm while the first is in flight.
+  confirmDisabled = false,
+}) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#050806] bg-opacity-80 px-4">
       <div className="w-full max-w-[360px] bg-prode-surface border border-prode-border rounded-[10px] p-5 flex flex-col gap-2">
@@ -18,7 +27,8 @@ const ConfirmDialog = ({ title, message, confirmLabel, cancelLabel, onConfirm, o
           <button
             type="button"
             onClick={onConfirm}
-            className="flex-1 h-[48px] rounded-[6px] bg-prode-destructive-bg text-white text-[14px] font-[800] hover:opacity-90 transition-opacity"
+            disabled={confirmDisabled}
+            className="flex-1 h-[48px] rounded-[6px] bg-prode-destructive-bg text-white text-[14px] font-[800] hover:opacity-90 transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {confirmLabel || "Confirmar"}
           </button>
@@ -35,6 +45,7 @@ ConfirmDialog.propTypes = {
   cancelLabel: PropTypes.string,
   onConfirm: PropTypes.func.isRequired,
   onCancel: PropTypes.func.isRequired,
+  confirmDisabled: PropTypes.bool,
 };
 
 export default ConfirmDialog;

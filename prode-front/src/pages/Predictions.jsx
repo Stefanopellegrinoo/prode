@@ -10,6 +10,7 @@ import { useTheme } from "../context/ThemeContext";
 import { useToast } from "../hooks/useToast";
 import { savePrediction } from "../services/predictionService";
 import { POINTS } from "../config/constants";
+import { getInitials } from "../lib/utils";
 
 // Deterministic Spanish abbreviations — avoids the locale-dependent quirks of
 // toLocaleDateString/toLocaleTimeString already flagged in utils/fixture.js (F1.4).
@@ -177,7 +178,7 @@ const Predictions = () => {
     };
   };
 
-  const initials = currentUser?.name?.substring(0, 2).toUpperCase() || "US";
+  const initials = getInitials(currentUser?.name, "US");
 
   return (
     <AppLayout width="wide">
