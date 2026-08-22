@@ -88,7 +88,10 @@
 }
 
 .light {
-  /* Light (forced regardless of ancestor .dark — used by Landing, ADR-2) */
+  /* Light forced regardless of ancestor .dark. No consumer reads these tokens on
+     Landing yet (it uses literal hex per the print-sheet design); this block exists
+     so themed components dropped into a .light wrapper render correctly.
+     Decision record: engram sdd/redesign-fidelity/design (ADR-2). */
   --prode-bg: #EDEFEA;
   --prode-canvas: #E4E7E1;
   --prode-surface: #FFFFFF;
