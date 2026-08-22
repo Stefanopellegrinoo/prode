@@ -243,7 +243,10 @@ const Groups = () => {
               <input
                 type="text"
                 value={joinCode}
-                onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                onChange={(e) => {
+                  setJoinCode(e.target.value.toUpperCase());
+                  setJoinError("");
+                }}
                 placeholder="RGB-····"
                 aria-invalid={Boolean(joinError)}
                 className={`w-full h-[56px] bg-prode-bg rounded-[6px] px-4 font-display text-[20px] font-[800] tracking-[0.3em] uppercase text-prode-text placeholder:text-prode-text-disabled outline-none transition-colors ${
@@ -290,7 +293,10 @@ const Groups = () => {
               <input
                 type="text"
                 value={createName}
-                onChange={(e) => setCreateName(e.target.value)}
+                onChange={(e) => {
+                  setCreateName(e.target.value);
+                  setCreateError("");
+                }}
                 placeholder="Nombre del grupo..."
                 aria-invalid={Boolean(createError)}
                 className={`w-full h-[56px] bg-prode-bg rounded-[6px] px-4 text-[16px] font-[600] text-prode-text placeholder:text-prode-text-disabled outline-none transition-colors ${
