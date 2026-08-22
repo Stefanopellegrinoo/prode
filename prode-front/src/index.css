@@ -21,8 +21,19 @@
   --color-prode-error: var(--prode-error);
   --color-prode-error-bg: var(--prode-error-bg);
   --color-prode-live: var(--prode-live);
+  --color-prode-live-fg: var(--prode-live-fg);
   --color-prode-warning: var(--prode-warning);
   --color-prode-warning-bg: var(--prode-warning-bg);
+
+  --color-prode-select-bg: var(--prode-select-bg);
+  --color-prode-select-fg: var(--prode-select-fg);
+  --color-prode-plate-locked-bg: var(--prode-plate-locked-bg);
+  --color-prode-plate-locked-fg: var(--prode-plate-locked-fg);
+  --color-prode-plate-locked-border: var(--prode-plate-locked-border);
+  --color-prode-gold: var(--prode-gold);
+  --color-prode-silver: var(--prode-silver);
+  --color-prode-bronze: var(--prode-bronze);
+  --color-prode-focus: var(--prode-focus);
 
   --animate-fade-in: fade-in 0.2s ease-out forwards;
   --animate-slide-up: slide-up 0.2s ease-out forwards;
@@ -58,8 +69,20 @@
   --prode-error: #9B2C24;
   --prode-error-bg: #F3D9D7;
   --prode-live: #B3261E;
+  --prode-live-fg: #FFFFFF;
   --prode-warning: #8A6D1F;
   --prode-warning-bg: #F5E9CF;
+
+  --prode-select-bg: #0B0F0D;
+  --prode-select-fg: #EDEFEA;
+  --prode-plate-locked-bg: #F4F6F2;
+  --prode-plate-locked-fg: #A8B1A7;
+  --prode-plate-locked-border: #DDE2DA;
+  --prode-plate-locked-selected-opacity: 0.5;
+  --prode-gold: #D8B54A;
+  --prode-silver: #98A399;
+  --prode-bronze: #8A6D4A;
+  --prode-focus: #0B0F0D;
 }
 
 .dark {
@@ -83,8 +106,21 @@
   --prode-error: #E88B8B;
   --prode-error-bg: #3A1D1D;
   --prode-live: #B3261E;
+  --prode-live-fg: #FFFFFF;
   --prode-warning: #FFB020;
-  --prode-warning-bg: #F5E9CF;
+  /* Handoff only defines "Pendiente de envío" for light; dark bg is extrapolated, pending design confirmation. */
+  --prode-warning-bg: #3A2E10;
+
+  --prode-select-bg: #EDEFEA;
+  --prode-select-fg: #0B0F0D;
+  --prode-plate-locked-bg: #141A16;
+  --prode-plate-locked-fg: #3A473F;
+  --prode-plate-locked-border: #141A16;
+  --prode-plate-locked-selected-opacity: 0.55;
+  --prode-gold: #D8B54A;
+  --prode-silver: #98A399;
+  --prode-bronze: #8A6D4A;
+  --prode-focus: #EDEFEA;
 
   color-scheme: dark;
 }

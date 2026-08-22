@@ -17,7 +17,7 @@ const MatchCard = ({ match, prediction, status, onPredict }) => {
   };
 
   return (
-    <div className="bg-prode-surface border border-prode-border rounded-[10px] p-[14px] px-4 flex flex-col gap-3">
+    <div className="bg-prode-surface border border-prode-border rounded-[8px] p-[14px] px-4 flex flex-col gap-3">
       <div className="flex items-center justify-between min-h-[26px]">
         <div className="text-[14px] font-[600] text-prode-text-muted">
           {match.time}
