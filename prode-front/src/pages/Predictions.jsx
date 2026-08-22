@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AppLayout from "../components/layouts/AppLayout";
 import MatchCard from "../components/fixture/MatchCard";
@@ -14,6 +14,7 @@ import { useOnline } from "../hooks/useOnline";
 import { useNow } from "../hooks/useNow";
 import { savePrediction } from "../services/predictionService";
 import { getFechaClosingStats, formatCountdown } from "../utils/fixture";
+import { pendingPicksStore } from "../utils/pendingPicks";
 import { POINTS, UMBRAL_CIERRE_MS } from "../config/constants";
 import { getInitials } from "../lib/utils";
 
@@ -51,9 +52,13 @@ const Predictions = () => {
   const [picks, setPicks] = useState({});
   // matchId -> pick, populated once a POST succeeds (avoids refetching the whole context).
   const [savedOverrides, setSavedOverrides] = useState({});
+  // matchId -> pick, saved to localStorage while offline, not yet POSTed (ADR-10).
+  const [offlinePending, setOfflinePending] = useState({});
   const [saving, setSaving] = useState(false);
+  // false | 'saved' | 'offline' — drives both the flash's visibility and its copy.
   const [savedFlash, setSavedFlash] = useState(false);
 
+  const userId = currentUser?.id ?? null;
   const currentSubdivisionId = activeSubdivisionId ?? subdivisions[0]?.id ?? null;
   const fechaKey = fechaActual?.key ?? null;
 
@@ -70,8 +75,62 @@ const Predictions = () => {
 
   const effectivePick = (match) => {
     const local = picks[match.id];
-    return local !== undefined ? local : savedPickFor(match);
+    if (local !== undefined) return local;
+    const offline = offlinePending[match.id];
+    if (offline !== undefined) return offline;
+    return savedPickFor(match);
   };
+
+  // Rehydrate pending picks on mount (or user switch) and flush them whenever
+  // there's a connection — both the "just reconnected" case and the "was
+  // already online, picks are stale in localStorage from a previous offline
+  // session" case. Reads localStorage directly rather than trusting React
+  // state as the source of truth, since `online` flips are the only trigger.
+  useEffect(() => {
+    if (!userId) return;
+    const store = pendingPicksStore(userId);
+    const pending = store.readPending();
+    const ids = Object.keys(pending);
+
+    if (!ids.length) {
+      setOfflinePending({});
+      return;
+    }
+    setOfflinePending(pending);
+    if (!online) return;
+
+    let cancelled = false;
+    (async () => {
+      const settled = await Promise.allSettled(
+        ids.map((id) => savePrediction({ matchId: Number(id), predicted_winner: pending[id] }))
+      );
+      if (cancelled) return;
+
+      const succeeded = [];
+      settled.forEach((result, i) => {
+        if (result.status === "fulfilled") succeeded.push(ids[i]);
+      });
+      if (!succeeded.length) return;
+
+      store.clearPending(succeeded);
+      setSavedOverrides((prev) => {
+        const next = { ...prev };
+        succeeded.forEach((id) => {
+          next[id] = pending[id];
+        });
+        return next;
+      });
+      setOfflinePending((prev) => {
+        const next = { ...prev };
+        succeeded.forEach((id) => delete next[id]);
+        return next;
+      });
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, online]);
 
   const matchesFor = (subdivisionId) => (fechaKey ? matchesBy[subdivisionId]?.[fechaKey] ?? [] : []);
 
@@ -111,6 +170,32 @@ const Predictions = () => {
 
   const handleSave = async () => {
     if (!pendingCount || saving) return;
+
+    // Offline: nothing to POST. Persist locally and let the reconnect effect
+    // above retry — no queue, no backoff, no conflict resolution (ADR-10).
+    // Never blocks: the user keeps picking normally on top of this.
+    if (!online) {
+      if (!userId) return; // protected route, shouldn't happen — degrade to no-op over a crash
+
+      const toStore = {};
+      pendingIds.forEach((id) => {
+        toStore[id] = picks[id];
+      });
+      const store = pendingPicksStore(userId);
+      store.writePending({ ...store.readPending(), ...toStore });
+
+      setOfflinePending((prev) => ({ ...prev, ...toStore }));
+      setPicks((prev) => {
+        const next = { ...prev };
+        pendingIds.forEach((id) => delete next[id]);
+        return next;
+      });
+
+      setSavedFlash("offline");
+      setTimeout(() => setSavedFlash(false), 2200);
+      return;
+    }
+
     setSaving(true);
 
     const settled = await Promise.allSettled(
@@ -138,7 +223,7 @@ const Predictions = () => {
     setSaving(false);
 
     if (succeeded.length) {
-      setSavedFlash(true);
+      setSavedFlash("saved");
       setTimeout(() => setSavedFlash(false), 2200);
     }
     if (failed.length) {
@@ -180,7 +265,11 @@ const Predictions = () => {
       }
     } else if (sel) {
       const hasLocalOverride = picks[match.id] !== undefined && picks[match.id] !== null;
-      badgeVariant = hasLocalOverride ? "unsaved" : "saved";
+      if (!hasLocalOverride && offlinePending[match.id] !== undefined) {
+        badgeVariant = "pending"; // saved to localStorage, waiting on a connection (ADR-10)
+      } else {
+        badgeVariant = hasLocalOverride ? "unsaved" : "saved";
+      }
     }
 
     return {
@@ -313,7 +402,13 @@ const Predictions = () => {
         </div>
       </div>
 
-      <SaveBar count={pendingCount} saving={saving} flash={savedFlash} onSave={handleSave} />
+      <SaveBar
+        count={pendingCount}
+        saving={saving}
+        flash={Boolean(savedFlash)}
+        flashLabel={savedFlash === "offline" ? "✓ Guardados en el teléfono" : "✓ Pronósticos guardados"}
+        onSave={handleSave}
+      />
     </AppLayout>
   );
 };

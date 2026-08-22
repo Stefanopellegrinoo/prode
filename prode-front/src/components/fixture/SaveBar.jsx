@@ -7,7 +7,14 @@ import { SHELL_WIDTH } from "../layouts/shellWidth";
 // breakpoint, width matched to the page's shell via `shellWidth` (same pattern
 // BottomNav already established for the same reason — fixed elements escape
 // the shell's max-width flow).
-const SaveBar = ({ count, saving, flash, onSave, shellWidth = SHELL_WIDTH.wide }) => {
+const SaveBar = ({
+  count,
+  saving,
+  flash,
+  flashLabel = "✓ Pronósticos guardados",
+  onSave,
+  shellWidth = SHELL_WIDTH.wide,
+}) => {
   if (count === 0 && !flash) return null;
 
   return (
@@ -16,7 +23,7 @@ const SaveBar = ({ count, saving, flash, onSave, shellWidth = SHELL_WIDTH.wide }
     >
       {flash ? (
         <div className="h-14 rounded-[8px] bg-prode-success-bg text-prode-success flex items-center justify-center text-[16px] font-[800]">
-          ✓ Pronósticos guardados
+          {flashLabel}
         </div>
       ) : (
         <button
@@ -36,6 +43,7 @@ SaveBar.propTypes = {
   count: PropTypes.number.isRequired,
   saving: PropTypes.bool,
   flash: PropTypes.bool,
+  flashLabel: PropTypes.string,
   onSave: PropTypes.func.isRequired,
   shellWidth: PropTypes.string,
 };
