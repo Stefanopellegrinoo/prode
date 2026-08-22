@@ -11,9 +11,9 @@ export const MATCH_STATUS = {
   FINISHED: "finished",
 }
 
-// Prediction points
+// Prediction points (display only — backend computes the real score)
 export const POINTS = {
-  EXACT_SCORE: 5, // Exact score prediction
-  WINNER_ONLY: 3, // Correct winner but wrong score
-  DRAW: 2, // Correctly predicted a draw
+  WIN: 3, // Correct winner prediction
+  DRAW: 5, // Correctly predicted a draw
+  MISS: 0, // Wrong or missing prediction
 }
