@@ -12,9 +12,8 @@ export const getMyGroups = async () => {
   }
 };
 
-export const getGroupDetail = async (id, tournamentId, subdivisionId) => {
+export const getGroupDetail = async (id) => {
   try {
-    // const response = await api.get(`/ranking/group/${id}/${subdivisionId}/${tournamentId}`)
     const response = await api.get(`/groups/${id}/details`);
 
     return response.data;

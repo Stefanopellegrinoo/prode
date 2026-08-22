@@ -18,10 +18,8 @@ const Predictions = lazy(() => import('./pages/Predictions'));
 const FixtureAdmin = lazy(() => import('./pages/FixtureAdmin'));
 const Groups = lazy(() => import('./pages/Groups'));
 const Profile = lazy(() => import('./pages/Profile'));
-const MatchDetail = lazy(() => import('./pages/MatchDetail'));
 const Ranking = lazy(() => import('./pages/Ranking'));
 const GroupDetail = lazy(() => import("./pages/GroupDetail"))
-const TournamentFixtures = lazy(() => import("./pages/TournamentFixtures"))
 
 // const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 // const NotFound = lazy(() => import('./pages/NotFound'));
@@ -71,8 +69,6 @@ function App() {
                     </ProtectedRoute>
                   }
                 />
-                <Route path="/match/:id" element={<ProtectedRoute><TournamentFixtures /></ProtectedRoute>} />
-
                 <Route path="/admin/fixture" element={<AdminRoute><FixtureAdmin /></AdminRoute>} />
 
                 {/* <Route path="/404" element={<NotFound />} />
