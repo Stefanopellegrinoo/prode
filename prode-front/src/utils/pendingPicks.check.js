@@ -14,7 +14,9 @@ const memoryStorage = () => {
 }
 
 globalThis.localStorage = memoryStorage()
-const { pendingPicksStore } = await import("./pendingPicks.js")
+const { pendingPicksStore, reconcilePendingOnPick, isTerminalPredictionError } = await import(
+  "./pendingPicks.js"
+)
 
 // --- basic read/write/clear roundtrip, scoped per user ---
 const userA = pendingPicksStore(1)
@@ -32,6 +34,34 @@ assert.deepEqual(userA.readPending(), { 9: "draw" })
 userA.clearPending(["9"])
 assert.deepEqual(userA.readPending(), {}) // key removed entirely, not left as "{}"
 assert.equal(localStorage.getItem("prode:pendingPicks:1"), null)
+
+// --- readPending() rejects malformed JSON shapes (array/string/number), never
+// --- hands the caller anything but a plain map ---
+globalThis.localStorage = memoryStorage()
+localStorage.setItem("prode:pendingPicks:4", JSON.stringify(["home", "away"]))
+assert.deepEqual(pendingPicksStore(4).readPending(), {})
+localStorage.setItem("prode:pendingPicks:5", JSON.stringify("home"))
+assert.deepEqual(pendingPicksStore(5).readPending(), {})
+localStorage.setItem("prode:pendingPicks:6", "{not json")
+assert.deepEqual(pendingPicksStore(6).readPending(), {})
+
+// --- reconcilePendingOnPick: single point of mutation for a pick change ---
+// no-op when nothing was pending for this match — most taps never touch storage
+const untouched = { 9: "draw" }
+assert.equal(reconcilePendingOnPick(untouched, "11", "home"), untouched) // same ref, no entry for 11
+
+// deselect (null) drops the stale entry entirely — this is the CRITICAL fix's repro
+assert.deepEqual(reconcilePendingOnPick({ 11: "home", 9: "draw" }, "11", null), { 9: "draw" })
+
+// picking something else overwrites the stale commitment, doesn't just drop it
+assert.deepEqual(reconcilePendingOnPick({ 11: "home" }, "11", "away"), { 11: "away" })
+
+// --- isTerminalPredictionError: only the backend's non-retryable messages ---
+assert.equal(isTerminalPredictionError("No se puede modificar el pronóstico de un partido ya iniciado"), true)
+assert.equal(isTerminalPredictionError("No se puede pronosticar un partido finalizado."), true)
+assert.equal(isTerminalPredictionError("Partido no encontrado"), true)
+assert.equal(isTerminalPredictionError("Error al guardar la predicción"), false) // generic/network fallback
+assert.equal(isTerminalPredictionError(undefined), false)
 
 // --- degrades to no-op, never throws, when localStorage itself is broken ---
 const brokenStorage = {
