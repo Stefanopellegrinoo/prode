@@ -99,6 +99,37 @@ export const normalizeFixture = (payload = {}) => {
 }
 
 /**
+ * Kickoff of the earliest non-finished match across every subdivision for a given
+ * fecha, plus how many of that fecha's matches still have no saved pick. Shared by
+ * Dashboard and Predictions so "el cierre" means the same thing on both screens
+ * (F5.3 — cierreCerca is about the whole fecha, not just the active tab).
+ */
+export const getFechaClosingStats = (matchesBy, fechaKey) => {
+  let kickoff = null
+  let missingCount = 0
+  if (!fechaKey) return { kickoff, missingCount }
+
+  for (const bySubdivision of Object.values(matchesBy)) {
+    for (const match of bySubdivision[fechaKey] ?? []) {
+      if (!match.savedPick) missingCount += 1
+      if (match.status !== "finished" && (!kickoff || match.kickoff < kickoff)) kickoff = match.kickoff
+    }
+  }
+  return { kickoff, missingCount }
+}
+
+/**
+ * "H:MM" countdown, clamped at 0. Minute-grain — the banner ticks on a coarse
+ * interval (hooks/useNow.js), matching this function's own precision.
+ */
+export const formatCountdown = (ms) => {
+  const totalMinutes = Math.max(0, Math.ceil(ms / 60000))
+  const hours = Math.floor(totalMinutes / 60)
+  const minutes = totalMinutes % 60
+  return `${hours}:${String(minutes).padStart(2, "0")}`
+}
+
+/**
  * Current fecha = first fecha (ascending) whose matches, across every subdivision,
  * are not all `finished`; falls back to the last fecha if every fecha is complete.
  */

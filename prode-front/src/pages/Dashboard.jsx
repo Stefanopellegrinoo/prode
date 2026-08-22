@@ -1,17 +1,21 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import AppLayout from "../components/layouts/AppLayout";
 import StatCard from "../components/ui/StatCard";
 import ProgressSegments from "../components/ui/ProgressSegments";
 import LoadingSpinner from "../components/ui/LoadingSpinner";
+import Banner from "../components/ui/Banner";
 import { useTournament } from "../context/TournamentContext";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import { useAlert } from "../context/AlertContext";
+import { useOnline } from "../hooks/useOnline";
+import { useNow } from "../hooks/useNow";
 import { getUserStats } from "../services/userService";
 import { getMyGroups } from "../services/groupService";
 import { getTournamentRanking } from "../services/rankingService";
-import { POINTS } from "../config/constants";
+import { getFechaClosingStats, formatCountdown } from "../utils/fixture";
+import { POINTS, UMBRAL_CIERRE_MS } from "../config/constants";
 import { getInitials } from "../lib/utils";
 
 const WEEKDAYS_FULL = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
@@ -44,10 +48,13 @@ const sideLabel = (match, pick) => {
 };
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const { currentUser } = useAuth();
   const { darkMode } = useTheme();
   const { tournament, subdivisions, fechas, fechaActual, matchesBy, loading, error } = useTournament();
   const { showToast, hideToast } = useAlert();
+  const online = useOnline();
+  const now = useNow();
 
   const [campaignSubId, setCampaignSubId] = useState(null);
   const [stats, setStats] = useState([]);
@@ -121,6 +128,15 @@ const Dashboard = () => {
     ? allMatchesForFecha.reduce((earliest, m) => (m.kickoff < earliest.kickoff ? m : earliest))
     : null;
   const closingLabel = earliestMatch ? kickoffLabel(earliestMatch) : null;
+
+  // F5.3 flags — derived from data already in context/state, no mocks, no new endpoints.
+  // The countdown comes from getFechaClosingStats (shared with Predictions): it skips
+  // finished matches, so the banner keeps working once the fecha's first match kicks off.
+  const sinConexion = !online;
+  const { kickoff: closingKickoff, missingCount: closingMissing } = getFechaClosingStats(matchesBy, fechaKey);
+  const msToClose = closingKickoff ? closingKickoff.getTime() - now : null;
+  const cierreCerca =
+    closingMissing > 0 && msToClose != null && msToClose > 0 && msToClose < UMBRAL_CIERRE_MS;
 
   const fechaLabel = fechaActual
     ? `Fecha ${fechaActual.number}${closingLabel ? ` · cierra ${closingLabel}` : ""}`
@@ -201,6 +217,36 @@ const Dashboard = () => {
             {initials}
           </div>
         </div>
+
+        {(sinConexion || (!loading && !profileLoading && !error && cierreCerca)) && (
+          <div className="px-4 flex flex-col gap-2 pb-4">
+            {sinConexion && (
+              <Banner tone="offline">
+                Sin conexión. Tus pronósticos quedan guardados en el teléfono y se envían solos al volver la
+                señal.
+              </Banner>
+            )}
+            {!loading && !profileLoading && !error && cierreCerca && (
+              <Banner
+                tone="urgent"
+                action={{ label: "Completar", onClick: () => navigate("/predictions") }}
+              >
+                <span className="inline-flex items-baseline gap-[10px]">
+                  <span className="font-display text-[20px] font-[900] tabular-nums text-prode-text">
+                    {formatCountdown(msToClose)}
+                  </span>
+                  <span>
+                    para el cierre. Te faltan{" "}
+                    <span className="text-prode-text font-[800]">
+                      {closingMissing} {closingMissing === 1 ? "partido" : "partidos"}
+                    </span>
+                    .
+                  </span>
+                </span>
+              </Banner>
+            )}
+          </div>
+        )}
 
         {loading || profileLoading ? (
           <div className="flex justify-center pt-10">

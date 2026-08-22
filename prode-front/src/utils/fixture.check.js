@@ -5,7 +5,14 @@
 // synthetic cases for branches the current seed data can't exercise (multi-fecha
 // ordering, finished status, live status).
 import assert from "node:assert/strict"
-import { normalizeFixture, matchStatus, deriveFechas, getFechaActual } from "./fixture.js"
+import {
+  normalizeFixture,
+  matchStatus,
+  deriveFechas,
+  getFechaActual,
+  getFechaClosingStats,
+  formatCountdown,
+} from "./fixture.js"
 
 // --- Real payload, trimmed to 2 matches per subdivision (captured 2026-08-20) ---
 const REAL_PAYLOAD = {
@@ -143,5 +150,28 @@ const allFinishedMatchesBy = {
 assert.equal(getFechaActual(syntheticFechas, allFinishedMatchesBy).key, "2026-08-22") // falls back to last
 
 assert.equal(getFechaActual([], {}), null)
+
+// --- getFechaClosingStats (synthetic) ---
+const closingMatchesBy = {
+  1: {
+    "2026-08-22": [
+      { savedPick: "home", status: "scheduled", kickoff: new Date("2026-08-22T15:00:00Z") },
+      { savedPick: null, status: "scheduled", kickoff: new Date("2026-08-22T14:00:00Z") },
+    ],
+  },
+  2: {
+    "2026-08-22": [{ savedPick: null, status: "finished", kickoff: new Date("2026-08-22T10:00:00Z") }],
+  },
+}
+const closing = getFechaClosingStats(closingMatchesBy, "2026-08-22")
+assert.equal(closing.missingCount, 2) // one per subdivision, finished one still counts as missing
+assert.equal(closing.kickoff.toISOString(), "2026-08-22T14:00:00.000Z") // earliest NON-finished kickoff
+assert.deepEqual(getFechaClosingStats({}, null), { kickoff: null, missingCount: 0 })
+
+// --- formatCountdown ---
+assert.equal(formatCountdown(3 * 60 * 60 * 1000), "3:00")
+assert.equal(formatCountdown(2 * 60 * 60 * 1000 + 14 * 60 * 1000), "2:14")
+assert.equal(formatCountdown(30 * 1000), "0:01") // rounds up, never shows "0:00" while still open
+assert.equal(formatCountdown(-5000), "0:00") // clamped, never negative
 
 console.log("fixture.check.js: OK")

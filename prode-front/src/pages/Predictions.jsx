@@ -1,15 +1,20 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import AppLayout from "../components/layouts/AppLayout";
 import MatchCard from "../components/fixture/MatchCard";
 import SubdivisionTabs from "../components/fixture/SubdivisionTabs";
 import SaveBar from "../components/fixture/SaveBar";
 import LoadingSpinner from "../components/ui/LoadingSpinner";
+import Banner from "../components/ui/Banner";
 import { useTournament } from "../context/TournamentContext";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import { useToast } from "../hooks/useToast";
+import { useOnline } from "../hooks/useOnline";
+import { useNow } from "../hooks/useNow";
 import { savePrediction } from "../services/predictionService";
-import { POINTS } from "../config/constants";
+import { getFechaClosingStats, formatCountdown } from "../utils/fixture";
+import { POINTS, UMBRAL_CIERRE_MS } from "../config/constants";
 import { getInitials } from "../lib/utils";
 
 // Deterministic Spanish abbreviations — avoids the locale-dependent quirks of
@@ -33,10 +38,13 @@ const sideLabel = (match, pick) => {
 };
 
 const Predictions = () => {
+  const navigate = useNavigate();
   const { currentUser } = useAuth();
   const { darkMode } = useTheme();
   const { showToast } = useToast();
-  const { subdivisions, fechaActual, matchesBy, loading, error } = useTournament();
+  const { subdivisions, fechas, fechaActual, matchesBy, loading, error } = useTournament();
+  const online = useOnline();
+  const now = useNow();
 
   const [activeSubdivisionId, setActiveSubdivisionId] = useState(null);
   // matchId -> 'home'|'away'|'draw'|null — undefined means "no local override".
@@ -48,6 +56,14 @@ const Predictions = () => {
 
   const currentSubdivisionId = activeSubdivisionId ?? subdivisions[0]?.id ?? null;
   const fechaKey = fechaActual?.key ?? null;
+
+  // F5.3 flags — derived from data already in context, no mocks, no new endpoints.
+  const sinFixture = fechas.length === 0;
+  const sinConexion = !online;
+  const { kickoff: closingKickoff, missingCount: closingMissing } = getFechaClosingStats(matchesBy, fechaKey);
+  const msToClose = closingKickoff ? closingKickoff.getTime() - now : null;
+  const cierreCerca =
+    closingMissing > 0 && msToClose != null && msToClose > 0 && msToClose < UMBRAL_CIERRE_MS;
 
   const savedPickFor = (match) =>
     savedOverrides[match.id] !== undefined ? savedOverrides[match.id] : match.savedPick;
@@ -221,6 +237,30 @@ const Predictions = () => {
             <div className="text-center p-4 text-prode-error text-[14px] font-[600]">{error}</div>
           ) : (
             <>
+              {sinConexion && (
+                <Banner tone="offline">
+                  Sin conexión. Tus pronósticos quedan guardados en el teléfono y se envían solos al volver
+                  la señal.
+                </Banner>
+              )}
+              {/* No action here: the user is already on the predictions screen. */}
+              {cierreCerca && (
+                <Banner tone="urgent">
+                  <span className="inline-flex items-baseline gap-[10px]">
+                    <span className="font-display text-[20px] font-[900] tabular-nums text-prode-text">
+                      {formatCountdown(msToClose)}
+                    </span>
+                    <span>
+                      para el cierre. Te faltan{" "}
+                      <span className="text-prode-text font-[800]">
+                        {closingMissing} {closingMissing === 1 ? "partido" : "partidos"}
+                      </span>
+                      .
+                    </span>
+                  </span>
+                </Banner>
+              )}
+
               <div className="flex items-center justify-between px-1 pt-[6px] pb-[2px]">
                 <div className="text-[14px] font-[600] text-prode-text-muted tabular-nums">
                   {subHeaderDate}
@@ -230,7 +270,24 @@ const Predictions = () => {
                 </div>
               </div>
 
-              {activeMatches.length === 0 ? (
+              {sinFixture ? (
+                <div className="bg-prode-surface border border-prode-border rounded-[10px] px-4 py-6 flex flex-col items-start gap-2 mt-1">
+                  <div className="font-display text-[22px] font-[900] uppercase leading-[1.1]">
+                    Fixture en camino
+                  </div>
+                  <div className="text-[14px] leading-[1.5] text-prode-text-muted">
+                    La URBA todavía no confirmó los partidos de esta fecha. Te avisamos apenas se pueda
+                    pronosticar.
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => navigate("/ranking")}
+                    className="h-11 px-4 mt-1 rounded-[6px] border border-prode-border-control text-[14px] font-[700]"
+                  >
+                    Ver resultados
+                  </button>
+                </div>
+              ) : activeMatches.length === 0 ? (
                 <div className="text-center p-6 text-prode-text-muted text-[14px] font-[600]">
                   No hay partidos programados para esta categoría.
                 </div>
