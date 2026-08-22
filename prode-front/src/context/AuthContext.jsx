@@ -52,9 +52,11 @@ export const AuthProvider = ({ children }) => {
       setCurrentUser(user)
       return user
     } catch (err) {
-
-      console.error("Error registering user:", err.response.data?.error)
-      setError(err.response.data?.error || "Failed to register")
+      // err.response can be undefined on network errors — the backend also
+      // returns { message }, never { error } (index.js error middleware).
+      const message = err.response?.data?.message || err.message || "Failed to register"
+      console.error("Error registering user:", message)
+      setError(message)
       throw err
     } finally {
       setLoading(false)

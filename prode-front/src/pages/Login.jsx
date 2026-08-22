@@ -1,15 +1,30 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import AppLayout from "../components/layouts/AppLayout";
 
+// Only email has a persona-language copy in the handoff (Alertas.dc.html 4D).
+// Empty-field and length rules have no verbatim copy — kept short, human,
+// no jargon, consistent with that tone (README: "Nunca solo color").
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MIN_PASSWORD_LENGTH = 8;
+
+// Backend already returns persona-language messages (auth.service.js) —
+// map them to the field they describe instead of dumping them in a
+// page-level banner.
+const BACKEND_FIELD_ERRORS = {
+  "Mail no registrado.": "email",
+  "El mail ya esta registrado.": "email",
+  "El nombre de usuario ya existe.": "username",
+  "Contraseña incorrecta.": "password",
+};
+
 const Login = ({ initialMode = "login" }) => {
-  const navigate = useNavigate();
   const { login, register } = useAuth();
 
   // Single component replacing both Login and Register
   const [mode, setMode] = useState(initialMode); // 'login' | 'register'
-  
+
   // Fields
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -17,10 +32,40 @@ const Login = ({ initialMode = "login" }) => {
   const [username, setUsername] = useState("");
   const [remember, setRemember] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({});
+
+  const switchMode = (nextMode) => {
+    setMode(nextMode);
+    setErrorMsg("");
+    setFieldErrors({});
+  };
+
+  const validate = () => {
+    const errors = {};
+    if (mode === "register") {
+      if (!name.trim()) errors.name = "Completá tu nombre.";
+      if (!username.trim()) errors.username = "Elegí un nombre de usuario.";
+    }
+    if (!email.trim()) {
+      errors.email = "Escribí tu email.";
+    } else if (!EMAIL_RE.test(email.trim())) {
+      errors.email = "Le falta el final al email (.com, .com.ar…).";
+    }
+    if (!password) {
+      errors.password = "Escribí tu contraseña.";
+    } else if (mode === "register" && password.length < MIN_PASSWORD_LENGTH) {
+      errors.password = `La contraseña necesita al menos ${MIN_PASSWORD_LENGTH} caracteres.`;
+    }
+    return errors;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMsg("");
+    const errors = validate();
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) return;
+
     try {
       if (mode === "login") {
         await login(email, password);
@@ -28,8 +73,35 @@ const Login = ({ initialMode = "login" }) => {
         await register({ name, username, email, password });
       }
     } catch (err) {
-      setErrorMsg(err.message || "Ocurrió un error. Verificá los datos.");
+      // Zod validation errors (server-side) come as { message, errors: [{path,message}] }
+      const zodIssues = err.response?.data?.errors;
+      if (Array.isArray(zodIssues) && zodIssues.length > 0) {
+        const mapped = {};
+        zodIssues.forEach((issue) => {
+          const field = issue.path?.[0];
+          if (field) mapped[field] = issue.message;
+        });
+        if (Object.keys(mapped).length > 0) {
+          setFieldErrors(mapped);
+          return;
+        }
+      }
+      const backendMessage = err.response?.data?.message;
+      const targetField = BACKEND_FIELD_ERRORS[backendMessage];
+      if (targetField) {
+        setFieldErrors({ [targetField]: backendMessage });
+      } else {
+        setErrorMsg(backendMessage || "Ocurrió un error. Revisá los datos e intentá de nuevo.");
+      }
     }
+  };
+
+  const clearFieldError = (key) => {
+    setFieldErrors((prev) => {
+      if (!prev[key]) return prev;
+      const { [key]: _removed, ...rest } = prev;
+      return rest;
+    });
   };
 
   const InputLabel = ({ label, helper }) => (
@@ -38,6 +110,18 @@ const Login = ({ initialMode = "login" }) => {
       {helper && <div className="text-[13px] text-prode-text-muted">{helper}</div>}
     </div>
   );
+
+  const inputClass = (hasError) =>
+    `w-full h-[56px] bg-prode-surface rounded-[6px] px-4 text-[16px] outline-none transition-colors ${
+      hasError
+        ? "border-2 border-prode-error"
+        : "border border-prode-border-control focus:border-prode-text"
+    }`;
+
+  const FieldError = ({ message }) =>
+    message ? (
+      <div className="mt-[6px] text-[13px] font-[600] text-prode-error">{message}</div>
+    ) : null;
 
   return (
     <AppLayout showBottomNav={false}>
@@ -66,21 +150,29 @@ const Login = ({ initialMode = "login" }) => {
                   <InputLabel label="Nombre completo" />
                   <input
                     type="text"
-                    required
                     value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="w-full h-[56px] bg-prode-surface border border-prode-border-control rounded-[6px] px-4 text-[16px] outline-none focus:border-prode-text transition-colors"
+                    onChange={(e) => {
+                      setName(e.target.value);
+                      clearFieldError("name");
+                    }}
+                    aria-invalid={Boolean(fieldErrors.name)}
+                    className={inputClass(Boolean(fieldErrors.name))}
                   />
+                  <FieldError message={fieldErrors.name} />
                 </div>
                 <div>
                   <InputLabel label="Usuario" helper="Como te van a ver en el ranking." />
                   <input
                     type="text"
-                    required
                     value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    className="w-full h-[56px] bg-prode-surface border border-prode-border-control rounded-[6px] px-4 text-[16px] outline-none focus:border-prode-text transition-colors"
+                    onChange={(e) => {
+                      setUsername(e.target.value);
+                      clearFieldError("username");
+                    }}
+                    aria-invalid={Boolean(fieldErrors.username)}
+                    className={inputClass(Boolean(fieldErrors.username))}
                   />
+                  <FieldError message={fieldErrors.username} />
                 </div>
               </>
             )}
@@ -89,25 +181,33 @@ const Login = ({ initialMode = "login" }) => {
               <InputLabel label="Email" />
               <input
                 type="email"
-                required
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full h-[56px] bg-prode-surface border border-prode-border-control rounded-[6px] px-4 text-[16px] outline-none focus:border-prode-text transition-colors"
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  clearFieldError("email");
+                }}
+                aria-invalid={Boolean(fieldErrors.email)}
+                className={inputClass(Boolean(fieldErrors.email))}
               />
+              <FieldError message={fieldErrors.email} />
             </div>
 
             <div>
-              <InputLabel 
-                label="Contraseña" 
+              <InputLabel
+                label="Contraseña"
                 helper={mode === "register" ? "Mínimo 8 caracteres." : undefined}
               />
               <input
                 type="password"
-                required
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full h-[56px] bg-prode-surface border border-prode-border-control rounded-[6px] px-4 text-[16px] outline-none focus:border-prode-text transition-colors"
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  clearFieldError("password");
+                }}
+                aria-invalid={Boolean(fieldErrors.password)}
+                className={inputClass(Boolean(fieldErrors.password))}
               />
+              <FieldError message={fieldErrors.password} />
             </div>
 
             {mode === "login" && (
@@ -152,7 +252,7 @@ const Login = ({ initialMode = "login" }) => {
           <div className="text-center mt-2">
             <button
               type="button"
-              onClick={() => setMode(mode === "login" ? "register" : "login")}
+              onClick={() => switchMode(mode === "login" ? "register" : "login")}
               className="text-[15px] font-[600] text-prode-text-muted border-b border-prode-text-muted hover:text-prode-text hover:border-prode-text transition-colors pb-[2px]"
             >
               {mode === "login"

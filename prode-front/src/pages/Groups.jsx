@@ -46,8 +46,17 @@ const Groups = () => {
     setTimeout(() => setCopiedId(null), 1800);
   };
 
+  // Backend throws "Código de invitación inválido" (group.repository.js) —
+  // translated here to the verbatim persona copy from Alertas.dc.html 4D.
+  const JOIN_ERROR_COPY = {
+    "Código de invitación inválido": "Ese código no existe. Revisá que sea el que te pasaron.",
+  };
+
   const handleJoin = async () => {
-    if (!joinCode) return;
+    if (!joinCode.trim()) {
+      setJoinError("Escribí el código de invitación.");
+      return;
+    }
     setJoining(true);
     setJoinError("");
     try {
@@ -56,14 +65,17 @@ const Groups = () => {
       setJoinCode("");
       await fetchGroups();
     } catch (err) {
-      setJoinError(err.message || "Error al unirse al grupo");
+      setJoinError(JOIN_ERROR_COPY[err.message] || err.message || "Error al unirse al grupo");
     } finally {
       setJoining(false);
     }
   };
 
   const handleCreate = async () => {
-    if (!createName.trim()) return;
+    if (!createName.trim()) {
+      setCreateError("Ponele un nombre a tu grupo.");
+      return;
+    }
     setCreating(true);
     setCreateError("");
     try {
@@ -233,9 +245,14 @@ const Groups = () => {
                 value={joinCode}
                 onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
                 placeholder="RGB-····"
-                className="w-full h-[56px] bg-prode-bg border border-prode-border-control rounded-[6px] px-4 font-display text-[20px] font-[800] tracking-[0.3em] uppercase text-prode-text placeholder:text-prode-text-disabled outline-none focus:border-prode-text transition-colors"
+                aria-invalid={Boolean(joinError)}
+                className={`w-full h-[56px] bg-prode-bg rounded-[6px] px-4 font-display text-[20px] font-[800] tracking-[0.3em] uppercase text-prode-text placeholder:text-prode-text-disabled outline-none transition-colors ${
+                  joinError
+                    ? "border-2 border-prode-error"
+                    : "border border-prode-border-control focus:border-prode-text"
+                }`}
               />
-              
+
               {joinError && (
                 <div className="text-prode-error text-[14px] font-[600]">{joinError}</div>
               )}
@@ -275,9 +292,14 @@ const Groups = () => {
                 value={createName}
                 onChange={(e) => setCreateName(e.target.value)}
                 placeholder="Nombre del grupo..."
-                className="w-full h-[56px] bg-prode-bg border border-prode-border-control rounded-[6px] px-4 text-[16px] font-[600] text-prode-text placeholder:text-prode-text-disabled outline-none focus:border-prode-text transition-colors"
+                aria-invalid={Boolean(createError)}
+                className={`w-full h-[56px] bg-prode-bg rounded-[6px] px-4 text-[16px] font-[600] text-prode-text placeholder:text-prode-text-disabled outline-none transition-colors ${
+                  createError
+                    ? "border-2 border-prode-error"
+                    : "border border-prode-border-control focus:border-prode-text"
+                }`}
               />
-              
+
               {createError && (
                 <div className="text-prode-error text-[14px] font-[600]">{createError}</div>
               )}
