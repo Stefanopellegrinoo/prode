@@ -50,12 +50,14 @@ export const Match = sequelize.define('Match', {
   home_score: {
     field: 'home_score',
     type: DataTypes.INTEGER,
-    allowNull: true
+    allowNull: true,
+    validate: { min: 0 }
   },
   away_score: {
     field: 'away_score',
     type: DataTypes.INTEGER,
-    allowNull: true
+    allowNull: true,
+    validate: { min: 0 }
   },
   status: {
     type: DataTypes.STRING(20),

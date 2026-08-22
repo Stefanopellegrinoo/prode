@@ -40,6 +40,20 @@ export const getRecentResults = async (limit = 5) => {
   }
 }
 
+// Grouped by subdivision name -> 'yyyy-MM-dd' -> Match[] (includes Subdivision + team names).
+// Reuses the existing GET /matches/tournament/:tournamentId (authenticate only, no admin
+// gate) — this is the same shape the Admin fixture table and the "Subdivisiones de {torneo}"
+// counts in the Torneos view are built from.
+export const getMatchesByTournament = async (tournamentId) => {
+  try {
+    const response = await api.get(`/matches/tournament/${tournamentId}`)
+    return response.data
+  } catch (error) {
+    console.error("Error fetching matches by tournament:", error)
+    throw new Error(error.response?.data?.message || "Error al obtener el fixture del torneo")
+  }
+}
+
 export const getMatchesForPrediction = async () => {
   try {
     const response = await api.get("/matches/for-prediction")
